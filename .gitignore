@@ -1,0 +1,4 @@
+mytar
+*.o
+out
+ref
