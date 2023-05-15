@@ -1,4 +1,5 @@
-mytar
+*
+!/**/
+!*.*
 *.o
-out
-ref
+.vscode
