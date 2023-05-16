@@ -10,7 +10,8 @@ void usage() {
 }
 
 int main(int argc, char *argv[]) {
-  int opt;
+  char opt;
+  int i = 0;
   /* Option flags */
   char *output = NULL;
   bool create_archive = false, 
@@ -19,10 +20,10 @@ int main(int argc, char *argv[]) {
        verbose = false, 
        strict = false;
   /* Parse options and update flags */
-  while ((opt = getopt(argc, argv, "ctxvSf:")) != -1) {
+  while ((opt = argv[1][i++])) {
     switch (opt) {
       case 'f':
-        output = optarg;
+        output = argv[2];
         break;
       case 'c':
         create_archive = true;

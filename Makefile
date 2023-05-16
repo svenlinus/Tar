@@ -10,7 +10,7 @@ valgrind: mytar
   valgrind --leak-check=yes ./mtar
 
 test: mytar
-	./mytar -c -f tarfile
+	./mytar cf tarfile
 
 clean:
 	rm -f *.o out ref tarfile
