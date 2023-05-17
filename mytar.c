@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "encode.h"
 typedef enum { false, true } bool;
 extern char *optarg;
 
@@ -47,6 +48,10 @@ int main(int argc, char *argv[]) {
     usage();
   if (!create_archive && !print_contents && !extract_contents)
     usage();
-
+  char *header = create_archive_header(argv[2]);
+  for (i = 0; i < 512; i ++) {
+    printf("%c", header[i]);
+  }
+  printf("\n");
   return 0;
 }
