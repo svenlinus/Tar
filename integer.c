@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <string.h>
+#include <stdint.h>
 
 uint32_t extract_special_int(char *where, int len) {
   /* For interoperability with GNU tar. GNU seems to

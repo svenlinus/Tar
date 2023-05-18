@@ -4,6 +4,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "integer.h"
+#include <sys/stat.h>
+#include <dirent.h>
+#include <libgen.h>
+#include <limits.h>
 
 void mode_to_octal(mode_t mode, char *result) {
   /* Converts an integer `mode_t` into and octal string */
@@ -99,7 +103,79 @@ char *create_archive_header(char *file_path) {
   }
 
   /** Write size **/
-  char size[12];
-  
+
   return header;
+}
+
+
+void add_to_tarfile(char *to_add);
+int isDirectory(char *path);
+
+void directories_traversal(char *path) {
+  /* level-order DFS of the directory */
+  DIR *dir;
+  struct dirent *dir_read;
+  struct stat stat_buffer;
+  int i=0;
+  int num_traversals = 0;
+  char child_path[PATH_MAX][PATH_MAX];
+
+  if (isDirectory(path) != 0) {
+    /* opening the directory */
+    dir = opendir(path);
+    if (dir == NULL) {
+      perror("opendir");
+      exit(EXIT_FAILURE);
+    }
+  }
+  else {
+    /* base case for a file */
+    char file_path[PATH_MAX];
+    snprintf(file_path, PATH_MAX, "%s/%s", dirname(path), basename(path));
+    printf("path: %s\n", path);
+    add_to_tarfile(path);
+    return;
+  }
+
+  /* iterating through all the directory's subdirectories or files */
+  while((dir_read = readdir(dir)) != NULL) {
+    
+    /* ignoring self and parent */
+    if (strcmp(dir_read->d_name, ".") == 0 || strcmp(dir_read->d_name, "..") == 0) {
+      continue;
+    }
+
+    printf("curr name: %s\n", dir_read->d_name);
+    /* statting the current child */
+    snprintf(child_path[i], PATH_MAX, "%s/%s", path, dir_read->d_name);
+
+    if (stat(child_path[i], &stat_buffer) == -1) {
+      perror ("stat");
+      exit(EXIT_FAILURE);
+    }
+
+    printf("path: %s\n", child_path[i]);
+    add_to_tarfile(child_path[i]);
+    i++;
+    num_traversals++;
+  }
+
+  /* recursing for each child */
+  for (i=0; i<num_traversals; i++) {
+    directories_traversal(child_path[i]);
+  }
+}
+
+void add_to_tarfile(char *to_add) {
+  /* not yet implemented */
+}
+
+int isDirectory(char *path) {
+  struct stat sb;
+  if (stat(path, &sb) == -1) {
+    perror("stat");
+    exit(EXIT_FAILURE);
+  }
+  /* returns 0 if it's not a directory */
+  return S_ISDIR(sb.st_mode);
 }
