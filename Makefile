@@ -19,5 +19,5 @@ test: mytar
 	./mytar cf out mytar.c
 
 clean:
-	rm -f *.o out ref tarfile mytar
+	rm -f *.o out ref mytar
 	clear

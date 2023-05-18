@@ -8,26 +8,26 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <limits.h>
+#define HEADER_LEN 512
 
-void mode_to_octal(mode_t mode, char *result) {
-  /* Converts an integer `mode_t` into and octal string */
-  mode_t mask = 07000;
-  int i;
-  short int perm;
-  result[0] = '0';
-  result[1] = '0';
-  result[2] = '0';
-  for (i = 0; i < 4; i++) {
-    perm = (mode & mask) >> ((3-i) * 3);
-    result[i + 3] = perm + 48;
-    mask >>= 3;
+void int_to_octal(int input, char *result, size_t size) {
+  /* Converts an integer into and octal string and pads the start with 0's */
+  int i, len;
+  char *octal = malloc(size);
+  sprintf(octal, "%o", input);
+  if ((len = strlen(octal)) > size-1) {
+    fprintf(stderr, "Can't create header: Octal %s too large", octal);
+    exit(EXIT_FAILURE);
   }
-  result[7] = '\0';
+  for (i = 0; i < size - len - 1; i ++)
+    result[i] = '0';
+  strcpy(result + i, octal);
+  result[size - 1] = '\0';
 }
 
 char *create_archive_header(char *file_path) {
   /* Writes the archive header for one file, returns pointer to header */
-  char *header = calloc(512, sizeof(char *));
+  char *header = calloc(HEADER_LEN, sizeof(char *));
   char prefix[155];
   int header_index = 0;
   int i;
@@ -67,7 +67,8 @@ char *create_archive_header(char *file_path) {
     perror("lstat");
     exit(EXIT_FAILURE);
   }
-  mode_to_octal(st.st_mode, mode_octal);
+  /* Convert to 4 digit octal (mask to ensure it is 4 digits) */
+  int_to_octal(st.st_mode & 07777, mode_octal, 8);
   strcpy(header + header_index, mode_octal);
   header_index += 8;
 
@@ -103,6 +104,44 @@ char *create_archive_header(char *file_path) {
   }
 
   /** Write size **/
+  char size[12];
+  int_to_octal(st.st_size, size, 12);
+  strcpy(header + header_index, size);
+  header_index += 12;
+
+  /** Write mtime **/
+  char mtime[12];
+  int_to_octal(st.st_mtime, mtime, 12);
+  strcpy(header + header_index, mtime);
+  header_index += 12;
+
+  /** Write typeflag **/
+  /* skip chksum */
+  header_index += 8;
+  char type;
+  if (S_ISDIR(st.st_mode)) 
+    type = '5';
+  else if (S_ISLNK(st.st_mode))
+    type = '2';
+  else
+    type = '0';
+  header[header_index] = type;
+  header_index += 2;
+
+
+  /* Should occur last */
+  /** Write chksum **/
+  unsigned int sum = 0;
+  char chksum[8];
+  /* Location to write chksum: */
+  header_index = 148;
+  for (i = 0; i < HEADER_LEN; i ++) {
+    sum += (unsigned char)header[i];
+  }
+  int_to_octal(sum, chksum, 8);
+  for (i = 0; i < 8; i ++) {
+    header[header_index + i] = chksum[i];
+  }
 
   return header;
 }

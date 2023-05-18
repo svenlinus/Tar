@@ -16,7 +16,7 @@ void usage() {
 int main(int argc, char *argv[]) {
   char opt;
   int i = 0;
-  char *path;
+  // char *path;
 
   /* Option flags */
   char *output = NULL;
@@ -60,12 +60,12 @@ int main(int argc, char *argv[]) {
     usage();
 
   /* passing the path through the traversal function */
-  path = argv[3];
-  printf("this is the path: %s\n", path);
-  directories_traversal(path);
+  // path = argv[3];
+  // printf("this is the path: %s\n", path);
+  // directories_traversal(path);
 
   char *header = create_archive_header(argv[3]);
-  for (i = 0; i < 512; i ++) {
+  for (i = 0; i < HEADER_LEN; i ++) {
     if (header[i])
       printf("%x ", header[i]);
     else
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   }
   printf("\n");
   int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  write(fd_out, header, 512);
+  write(fd_out, header, HEADER_LEN);
 
   return 0;
 }
