@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "encode.h"
+#include <fcntl.h>
 typedef enum { false, true } bool;
 extern char *optarg;
 
@@ -43,15 +44,20 @@ int main(int argc, char *argv[]) {
         break;
     }
   }
-  printf("%s %d %d %d %d %d\n", output, create_archive, print_contents, extract_contents, verbose, strict);
+  printf("%s %d %d %d %d %d\n---------\n", output, create_archive, print_contents, extract_contents, verbose, strict);
   if (!output)
     usage();
   if (!create_archive && !print_contents && !extract_contents)
     usage();
-  char *header = create_archive_header(argv[2]);
+  char *header = create_archive_header(argv[3]);
   for (i = 0; i < 512; i ++) {
-    printf("%c", header[i]);
+    if (header[i])
+      printf("%x ", header[i]);
+    else
+      printf("_");
   }
   printf("\n");
+  int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  write(fd_out, header, 512);
   return 0;
 }

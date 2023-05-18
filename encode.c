@@ -26,6 +26,7 @@ char *create_archive_header(char *file_path) {
   char prefix[155];
   int header_index = 0;
   int i;
+
   /* Write file name */
   int path_len;
   if ((path_len = strlen(file_path)) > 255) {
@@ -45,13 +46,14 @@ char *create_archive_header(char *file_path) {
       /* 'header_name_field = file_path[i:]' */
       strcpy(header, file_path + i);
     } else {
-      fprintf(stderr, "File name %s too long", file_path);
+      fprintf(stderr, "Can't create header: File name %s too long", file_path);
       exit(EXIT_FAILURE);
     }
   } else {
     strcpy(header, file_path);
   }
   header_index += 100;
+
   /* Write file mode */
   struct stat st;
   char mode_octal[8];
@@ -62,7 +64,30 @@ char *create_archive_header(char *file_path) {
   mode_to_octal(st.st_mode, mode_octal);
   strcpy(header + header_index, mode_octal);
   header_index += 8;
-  /* Write UID */
 
+  /* Write UID and GID*/
+  char uid[8], gid[8];
+  int uid_len, gid_len;
+  sprintf(uid, "%o", st.st_uid);
+  sprintf(gid, "%o", st.st_gid);
+  if ((uid_len = strlen(uid)) < 8) {
+    for (i = 0; i < 7-uid_len; i ++)
+    header[header_index + i] = '0';
+    strcpy(header + header_index + i, uid);
+    header[header_index + i + uid_len] = '\0';
+  } else {
+    insert_special_int(header + header_index, 8, st.st_uid);
+  }
+  header_index += 8;
+  if ((gid_len = strlen(gid)) < 8) {
+    for (i = 0; i < 7-gid_len; i ++)
+      header[header_index + i] = '0';
+    strcpy(header + header_index + i, gid);
+    header[header_index + i + gid_len] = '\0';
+    header_index += 8;
+  } else {
+      fprintf(stderr, "Can't create header: GID %s too long", gid);
+      exit(EXIT_FAILURE);
+  }
   return header;
 }
