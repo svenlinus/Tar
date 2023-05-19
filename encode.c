@@ -128,9 +128,10 @@ char *create_archive_header(char *file_path) {
   header[header_index] = type;
   header_index += 2;
 
+  
 
-  /* Should occur last */
-  /** Write chksum **/
+
+  /** Write chksum (should occur last) **/
   unsigned int sum = 0;
   char chksum[8];
   /* Location to write chksum: */
