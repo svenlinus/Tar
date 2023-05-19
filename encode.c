@@ -9,9 +9,11 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <limits.h>
-#define HEADER_LEN 512
 #include <grp.h>
 #include <pwd.h>
+#include <unistd.h>
+
+#define HEADER_LEN 512
 
 void int_to_octal(int input, char *result, size_t size) {
   /* Converts an integer into and octal string and pads the start with 0's */
