@@ -48,8 +48,10 @@ char *create_archive_header(char *file_path) {
     if (i < path_len-1) {
       /* `prefix = file_path[0:i]` */
       strncpy(prefix, file_path, i);
+      if (i < 155)
+        prefix[i] = '\0';
       /* `header_name_field = file_path[i:]` */
-      strcpy(header, file_path + i);
+      strncpy(header, file_path + i, 100);
     } else {
       fprintf(stderr, "Can't create header: File name %s too long", file_path);
       exit(EXIT_FAILURE);
@@ -128,8 +130,14 @@ char *create_archive_header(char *file_path) {
   header[header_index] = type;
   header_index += 2;
 
-  
 
+
+
+
+  /** Write prefix **/
+  /* Location to write prefix: */
+  header_index = 345;
+  strcpy(header + header_index, prefix);
 
   /** Write chksum (should occur last) **/
   unsigned int sum = 0;
