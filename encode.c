@@ -178,11 +178,6 @@ char *create_archive_header(char *file_path) {
   free(pw);
   free(gr);
 
-  /** Write devmajor and devminor (he said to leave it blank?) **/
-
-
-
-
   /** Write prefix **/
   /* Location to write prefix: */
   header_index = 345;
