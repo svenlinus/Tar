@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <grp.h>
 #include <pwd.h>
+#include <unistd.h>
 
 #define HEADER_LEN 512
 
