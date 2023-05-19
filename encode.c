@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,8 @@
 #include <libgen.h>
 #include <limits.h>
 #define HEADER_LEN 512
+#include <grp.h>
+#include <pwd.h>
 
 void int_to_octal(int input, char *result, size_t size) {
   /* Converts an integer into and octal string and pads the start with 0's */
@@ -88,7 +91,7 @@ char *create_archive_header(char *file_path) {
     strcpy(header + header_index + i, uid);
     header[header_index + i + uid_len] = '\0';
   } else {
-    /* If uid_lem > 7, use compress it and add to header */
+    /* If uid_len > 7, use compress it and add to header */
     insert_special_int(header + header_index, 8, st.st_uid);
   }
   header_index += 8;
@@ -130,9 +133,50 @@ char *create_archive_header(char *file_path) {
   header[header_index] = type;
   header_index += 2;
 
+  /** Write linkname **/
+  header_index = 157;
+  char readlink_buffer[100];
+  ssize_t num_read = readlink(file_path, readlink_buffer, 100);
+  if (num_read < 0) {
+    perror("readlink");
+    exit(EXIT_FAILURE);
+  }
+  /* ask Dr. Nico if I should add a check abbout truncation */
+  strcpy(header + header_index, readlink_buffer);
+  header_index += num_read;
+  if (num_read != 100) {
+    header[header_index] = '\0';
+  }
 
+  /** Write magic **/
+  header_index = 257;
+  strcpy(header + header_index, "ustar");
 
+  /** Write version **/
+  header_index = 263;
+  strcpy(header + header_index, "00");
 
+  /** Write uname and gname **/
+  header_index = 265;
+  struct stat stat_buf;
+  if (stat(file_path, &stat_buf) == -1) {
+    perror("stat");
+    exit(EXIT_FAILURE);
+  }
+  struct passwd *pw = getpwuid(stat_buf.st_uid);
+  struct group *gr = getgrgid(stat_buf.st_gid);
+
+  char *uname = pw->pw_name;
+  char *gname = gr->gr_name;
+
+  /* ask if the truncation is different */
+  strncpy(header + header_index, uname, 32); 
+  header_index = 297;
+  strncpy(header + header_index, gname, 32);
+  header_index = 329;
+
+  free(pw);
+  free(gr);
 
   /** Write prefix **/
   /* Location to write prefix: */
@@ -154,7 +198,6 @@ char *create_archive_header(char *file_path) {
 
   return header;
 }
-
 
 void add_to_tarfile(char *to_add);
 int isDirectory(char *path);
@@ -195,7 +238,7 @@ void directories_traversal(char *path) {
 
     printf("curr name: %s\n", dir_read->d_name);
     /* statting the current child */
-    snprintf(child_path[i], PATH_MAX, "%s/%s", path, dir_read->d_name);
+    sprintf(child_path[i], "%s/%s", path, dir_read->d_name);
 
     if (stat(child_path[i], &stat_buffer) == -1) {
       perror ("stat");
@@ -212,6 +255,7 @@ void directories_traversal(char *path) {
   for (i=0; i<num_traversals; i++) {
     directories_traversal(child_path[i]);
   }
+
 }
 
 void add_to_tarfile(char *to_add) {
