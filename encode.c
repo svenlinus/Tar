@@ -13,6 +13,9 @@
 #include <pwd.h>
 #include <unistd.h>
 
+#ifndef PATH_MAX
+  #define PATH_MAX 2048
+#endif
 #define HEADER_LEN 512
 
 void int_to_octal(int input, char *result, size_t size) {
@@ -52,9 +55,9 @@ char *create_archive_header(char *file_path) {
       ;
     if (i < path_len-1) {
       /* `prefix = file_path[0:i]` */
-      strncpy(prefix, file_path, i);
-      if (i < 155)
-        prefix[i] = '\0';
+      strncpy(prefix, file_path, i-1);
+      if (i-1 < 155)
+        prefix[i-1] = '\0';
       /* `header_name_field = file_path[i:]` */
       strncpy(header, file_path + i, 100);
     } else {
@@ -112,7 +115,7 @@ char *create_archive_header(char *file_path) {
 
   /** Write size **/
   char size[12];
-  int_to_octal(st.st_size, size, 12);
+  int_to_octal((S_ISREG(st.st_mode) ? st.st_size : 0), size, 12);
   strcpy(header + header_index, size);
   header_index += 12;
 
@@ -139,15 +142,12 @@ char *create_archive_header(char *file_path) {
   header_index = 157;
   char readlink_buffer[100];
   ssize_t num_read = readlink(file_path, readlink_buffer, 100);
-  if (num_read < 0) {
-    perror("readlink");
-    exit(EXIT_FAILURE);
-  }
-  /* ask Dr. Nico if I should add a check abbout truncation */
-  strcpy(header + header_index, readlink_buffer);
-  header_index += num_read;
-  if (num_read != 100) {
-    header[header_index] = '\0';
+  if (num_read > 0) {
+    strcpy(header + header_index, readlink_buffer);
+    header_index += num_read;
+    if (num_read != 100) {
+      header[header_index] = '\0';
+    }
   }
 
   /** Write magic **/
@@ -177,9 +177,6 @@ char *create_archive_header(char *file_path) {
   strncpy(header + header_index, gname, 32);
   header_index = 329;
 
-  free(pw);
-  free(gr);
-
   /** Write prefix **/
   /* Location to write prefix: */
   header_index = 345;
@@ -193,6 +190,8 @@ char *create_archive_header(char *file_path) {
   for (i = 0; i < HEADER_LEN; i ++) {
     sum += (unsigned char)header[i];
   }
+  /* Add spaces (32) occupying the 8 chksum bytes (32 * 8) */
+  sum += 256;
   int_to_octal(sum, chksum, 8);
   for (i = 0; i < 8; i ++) {
     header[header_index + i] = chksum[i];
