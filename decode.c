@@ -60,8 +60,11 @@ void read_archive_header(char *header, struct header *info) {
   for (i = 0; i < HEADER_LEN; i ++) {
     sum += (unsigned char)header[i];
   }
+  /* If the actual sum doesn't match the header chksum, then the header is 
+  corrupted */
   if (sum != info->chksum) {
-    fprintf(stderr, "Can't read header: corrupt header \nActual: %d chksum: %d\n", sum, info->chksum);
+    /* Throw error with expected (`sum`) vs actual (`info->chksum`) */
+    fprintf(stderr, "Corrupt header\ne: %d a: %d\n", sum, info->chksum);
     exit(EXIT_FAILURE);
   }
 
