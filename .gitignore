@@ -5,3 +5,5 @@
 .vscode
 mytar.dSYM/Contents
 *.out
+traversal.c
+test.c
