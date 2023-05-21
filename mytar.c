@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
       add_to_tarfile(argv[3], output_fd);
     }
     else {
+      add_to_tarfile(argv[3], output_fd);
       traverse_directory(argv[3], output_fd);
     }
 

@@ -234,7 +234,7 @@ void traverse_directory(char *path, int output_fd) {
         strcat(new_path, dir_read->d_name);
 
         /* dealing with the curr child */
-        /* printf("%s\n", new_path); */
+        printf("%s\n", new_path);
         add_to_tarfile(new_path, output_fd);
 
         /* recurses with the new path */
@@ -262,36 +262,38 @@ void add_to_tarfile(char *to_add, int output_fd) {
   /* write the header */
   write(output_fd, curr_header, 512);
 
-  /* write the file contents */
-  input_fd = open(to_add, O_RDONLY);
-  
-  do {
-    read_result = read(input_fd, buffer, BUFFER_SIZE);
-    if (read_result < 0) {
-      free(buffer);
-      perror("read");
-      exit(EXIT_FAILURE);
-    }
-    write(output_fd, buffer, read_result);
-  } while((read_result != 0) || (read_result == BUFFER_SIZE -1));
-  
-  close(input_fd);
-  free(buffer);
-
   if (lstat(to_add, &sb) < 0) {
     perror("lstat");
     exit(EXIT_FAILURE);
   }
+
+  if (S_ISREG(sb.st_mode)) {
+    /* write the file contents */
+    input_fd = open(to_add, O_RDONLY);
+    do {
+      read_result = read(input_fd, buffer, BUFFER_SIZE);
+      if (read_result < 0) {
+        free(buffer);
+        perror("read");
+        exit(EXIT_FAILURE);
+      }
+      write(output_fd, buffer, read_result);
+    } while((read_result != 0) || (read_result == BUFFER_SIZE -1));
+    close(input_fd);
+    free(buffer);
+  }
+
   size = sb.st_size;
   /* writing the ending null bytes */
   if (size < 512) {
     num_nulls_to_write = BODY_CHECK_LEN - size;
     ending_nulls = (char *)calloc(num_nulls_to_write, 1);
+    write(output_fd, ending_nulls, num_nulls_to_write);
   }
   else {
     num_nulls_to_write = 2;
-    ending_nulls = (char *)calloc(num_nulls_to_write, 1);
+    ending_nulls = (char *)calloc(num_nulls_to_write * 2, 1);
+    write(output_fd, ending_nulls, num_nulls_to_write * 2);
   }
-  write(output_fd, ending_nulls, num_nulls_to_write);
   free(ending_nulls);
 }
