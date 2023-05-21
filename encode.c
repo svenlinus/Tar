@@ -18,6 +18,9 @@
 #ifndef PATH_MAX
   #define PATH_MAX 2048
 #endif
+#ifndef PATH_MAX
+  #define PATH_MAX 2048
+#endif
 #define HEADER_LEN 512
 #define BODY_CHECK_LEN 512
 #define BUFFER_SIZE 2000
@@ -104,7 +107,7 @@ char *create_archive_header(char *file_path) {
     strcpy(header + header_index + i, uid);
     header[header_index + i + uid_len] = '\0';
   } else {
-    /* If uid_len > 7, use compress it and add to header */
+    /* If uid_len > 7, compress it and add to header */
     insert_special_int(header + header_index, 8, st.st_uid);
   }
   header_index += 8;
@@ -115,11 +118,11 @@ char *create_archive_header(char *file_path) {
     /* Add gid to header */
     strcpy(header + header_index + i, gid);
     header[header_index + i + gid_len] = '\0';
-    header_index += 8;
   } else {
       fprintf(stderr, "Can't create header: GID %s too long", gid);
       exit(EXIT_FAILURE);
   }
+  header_index += 8;
 
   /** Write size **/
   char size[12];
