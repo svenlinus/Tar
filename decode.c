@@ -9,6 +9,7 @@
 #include "encode.h"
 
 void read_archive_header(char *header, struct header *info) {
+  /* Extracts desired header fields and stores the data in `info` */
   int header_index = 0;
   int i;
 
