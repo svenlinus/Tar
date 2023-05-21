@@ -138,16 +138,14 @@ char *create_archive_header(char *file_path) {
   /** Write linkname **/
   header_index = 157;
   char readlink_buffer[100];
+  /* check if it's really a link first */
   ssize_t num_read = readlink(file_path, readlink_buffer, 100);
-  if (num_read < 0) {
-    perror("readlink");
-    exit(EXIT_FAILURE);
-  }
-  /* ask Dr. Nico if I should add a check abbout truncation */
-  strcpy(header + header_index, readlink_buffer);
-  header_index += num_read;
-  if (num_read != 100) {
-    header[header_index] = '\0';
+  if (num_read > 0) {
+    strncpy(header + header_index, readlink_buffer, num_read);
+    header_index += num_read;
+    if (num_read != 100) {
+      header[header_index] = '\0';
+    }
   }
 
   /** Write magic **/
@@ -171,14 +169,10 @@ char *create_archive_header(char *file_path) {
   char *uname = pw->pw_name;
   char *gname = gr->gr_name;
 
-  /* ask if the truncation is different */
   strncpy(header + header_index, uname, 32); 
   header_index = 297;
   strncpy(header + header_index, gname, 32);
   header_index = 329;
-
-  free(pw);
-  free(gr);
 
   /** Write prefix **/
   /* Location to write prefix: */
@@ -273,3 +267,9 @@ int isDirectory(char *path) {
   /* returns 0 if it's not a directory */
   return S_ISDIR(sb.st_mode);
 }
+
+/* have a struct for everythign
+add everything to the header
+write the header
+write the file
+write the two null blocks */
