@@ -65,7 +65,7 @@ void read_archive_header(char *header, struct header *info) {
   corrupted */
   if (sum != info->chksum) {
     /* Throw error with expected (`sum`) vs actual (`info->chksum`) */
-    fprintf(stderr, "Corrupt chksum\ne: %d a: %d\n", sum, info->chksum);
+    fprintf(stderr, "Corrupt chksum\nexp: %d act: %d\n", sum, info->chksum);
     exit(EXIT_FAILURE);
   }
 
@@ -81,7 +81,7 @@ void read_archive_header(char *header, struct header *info) {
   char magic[6];
   strncpy(magic, header + header_index, 6);
   if (strcmp(magic, "ustar")) {
-    fprintf(stderr, "Corrupt magic\ne: ustar a: %s\n", magic);
+    fprintf(stderr, "Corrupt magic\nexp: ustar act: %s\n", magic);
     exit(EXIT_FAILURE);
   }
   header_index += 6;
@@ -91,7 +91,7 @@ void read_archive_header(char *header, struct header *info) {
   strncpy(version, header + header_index, 2);
   version[2] = '\0';
   if (strcmp(version, "00")) {
-    fprintf(stderr, "Corrupt version\ne: 00 a: %s\n", version);
+    fprintf(stderr, "Corrupt version\nexp: 00 act: %s\n", version);
     exit(EXIT_FAILURE);
   }
   header_index += 2;
