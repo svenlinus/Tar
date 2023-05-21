@@ -69,7 +69,26 @@ void read_archive_header(char *header, struct header *info) {
   info->typeflag = header[header_index];
   header_index += 1;
 
+  /** Read linkname **/
+  strncpy(info->linkname, header + header_index, 100);
+  header_index += 100;
+
+  /** Read uname **/
+  header_index = 265;
+  strncpy(info->uname, header + header_index, 32);
+  header_index += 32;
+
+  /** Read gname **/
+  strncpy(info->gname, header + header_index, 32);
+  header_index += 32;
+
+  /** Read prefix **/
+  header_index = 345;
+  strncpy(info->prefix, header + header_index, 155);
+  header_index += 155;
+
   printf("%s %d %d %d %d %d %d %c\n", info->name, info->stat.st_mode, info->stat.st_uid, info->stat.st_gid, (int)info->stat.st_size, (int)info->stat.st_mtime, info->chksum, info->typeflag);
+  printf("%s %s %s %s\n", info->linkname, info->uname, info->gname, info->prefix);
 }
 
 long int octal_to_int(char *input, size_t size) {
