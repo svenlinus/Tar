@@ -4,9 +4,8 @@
 #include <string.h>
 #include "encode.h"
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <libgen.h>
+
+/* TEST FILE */
 
 typedef enum { false, true } bool;
 extern char *optarg;
@@ -19,7 +18,7 @@ void usage() {
 int main(int argc, char *argv[]) {
   char opt;
   int i = 0;
-  struct stat sb;
+  // char *path;
 
   /* Option flags */
   char *output = NULL;
@@ -62,7 +61,11 @@ int main(int argc, char *argv[]) {
   if (!create_archive && !print_contents && !extract_contents)
     usage();
 
-  /* debug on a single file 
+  /* passing the path through the traversal function */
+  // path = argv[3];
+  // printf("this is the path: %s\n", path);
+  // directories_traversal(path);
+
   char *header = create_archive_header(argv[3]);
   for (i = 0; i < HEADER_LEN; i ++) {
     if (header[i])
@@ -72,25 +75,7 @@ int main(int argc, char *argv[]) {
   }
   printf("\n");
   int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  write(fd_out, header, HEADER_LEN);*/
+  write(fd_out, header, HEADER_LEN);
 
-  int output_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  if (output_fd < 0) {
-    perror("open");
-    exit(EXIT_FAILURE);
-  }
-
-  if (lstat(argv[3], &sb) < 0) {
-    perror("lstat");
-    exit(EXIT_FAILURE);
-  }
-  if (!(S_ISDIR(sb.st_mode))) {
-    add_to_tarfile(argv[3], output_fd);
-  }
-  else {
-    traverse_directory(argv[3], output_fd);
-  }
-
-  close(output_fd);
   return 0;
 }
