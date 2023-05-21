@@ -12,11 +12,21 @@
 #include <grp.h>
 #include <pwd.h>
 #include <unistd.h>
+#include <fcntl.h>
+
 
 #ifndef PATH_MAX
   #define PATH_MAX 2048
 #endif
+#ifndef PATH_MAX
+  #define PATH_MAX 2048
+#endif
 #define HEADER_LEN 512
+#define BODY_CHECK_LEN 512
+#define BUFFER_SIZE 2000
+
+
+void add_to_tarfile(char *to_add, int output_fd);
 
 void int_to_octal(int input, char *result, size_t size) {
   /* Converts an integer into and octal string and pads the start with 0's */
@@ -51,8 +61,9 @@ char *create_archive_header(char *file_path) {
   if (path_len > 100) {
     i = path_len - 100;
     /* Find the first '/' within 100 characters from the end */
-    while (i < path_len && file_path[i++] != '/')
-      ;
+    while (i < path_len && file_path[i++] != '/') {
+      /* do nothing */
+    }
     if (i < path_len-1) {
       /* `prefix = file_path[0:i]` */
       strncpy(prefix, file_path, i-1);
@@ -188,7 +199,7 @@ char *create_archive_header(char *file_path) {
   /* Location to write chksum: */
   header_index = 148;
   for (i = 0; i < HEADER_LEN; i ++) {
-    sum += (unsigned char)header[i];
+    sum += header[i];
   }
   /* Add spaces (32) occupying the 8 chksum bytes (32 * 8) */
   sum += 256;
@@ -200,75 +211,87 @@ char *create_archive_header(char *file_path) {
   return header;
 }
 
-void add_to_tarfile(char *to_add);
-int isDirectory(char *path);
-
-void directories_traversal(char *path) {
-  /* level-order DFS of the directory */
-  DIR *dir;
-  struct dirent *dir_read;
-  struct stat stat_buffer;
-  int i=0;
-  int num_traversals = 0;
-  char child_path[PATH_MAX][PATH_MAX];
-
-  if (isDirectory(path) != 0) {
-    /* opening the directory */
+void traverse_directory(char *path, int output_fd) {
+    DIR *dir;
+    struct dirent *dir_read;
+    struct stat stat_buffer;
     dir = opendir(path);
     if (dir == NULL) {
-      perror("opendir");
-      exit(EXIT_FAILURE);
+        perror("opendir");
+        exit(EXIT_FAILURE);
     }
-  }
-  else {
-    /* base case for a file */
-    char file_path[PATH_MAX];
-    snprintf(file_path, PATH_MAX, "%s/%s", dirname(path), basename(path));
-    printf("path: %s\n", path);
-    add_to_tarfile(path);
-    return;
-  }
+    while((dir_read = readdir(dir)) != NULL) {
+        /* skipping over self and parent */
+        if (strcmp(dir_read->d_name, ".") == 0 
+        || strcmp(dir_read->d_name, "..") == 0) {
+            continue;
+        }
 
-  /* iterating through all the directory's subdirectories or files */
-  while((dir_read = readdir(dir)) != NULL) {
-    
-    /* ignoring self and parent */
-    if (strcmp(dir_read->d_name, ".") == 0 || strcmp(dir_read->d_name, "..") == 0) {
-      continue;
+        /* getting the path of the current child */
+        char new_path[256];
+        strcpy(new_path, path);
+        strcat(new_path, "/");
+        strcat(new_path, dir_read->d_name);
+
+        /* dealing with the curr child */
+        /* printf("%s\n", new_path); */
+        add_to_tarfile(new_path, output_fd);
+
+        /* recurses with the new path */
+        if (lstat(new_path, &stat_buffer) < 0) {
+            perror("lstat");
+            exit(EXIT_FAILURE);
+        }
+        if (S_ISDIR(stat_buffer.st_mode)) {
+            traverse_directory(new_path, output_fd);
+        }
     }
-
-    printf("curr name: %s\n", dir_read->d_name);
-    /* statting the current child */
-    sprintf(child_path[i], "%s/%s", path, dir_read->d_name);
-
-    if (stat(child_path[i], &stat_buffer) == -1) {
-      perror ("stat");
-      exit(EXIT_FAILURE);
-    }
-
-    printf("path: %s\n", child_path[i]);
-    add_to_tarfile(child_path[i]);
-    i++;
-    num_traversals++;
-  }
-
-  /* recursing for each child */
-  for (i=0; i<num_traversals; i++) {
-    directories_traversal(child_path[i]);
-  }
-
+    closedir(dir);
 }
 
-void add_to_tarfile(char *to_add) {
-  /* not yet implemented */
-}
-
-int isDirectory(char *path) {
+void add_to_tarfile(char *to_add, int output_fd) {
+  char *curr_header = create_archive_header(to_add);
+  int read_result;
+  int input_fd;
+  char *buffer = (char *)malloc(BUFFER_SIZE);
+  char *ending_nulls;
+  int num_nulls_to_write;
   struct stat sb;
-  if (stat(path, &sb) == -1) {
-    perror("stat");
+  int size;
+
+  /* write the header */
+  write(output_fd, curr_header, 512);
+
+  /* write the file contents */
+  input_fd = open(to_add, O_RDONLY);
+  
+  do {
+    read_result = read(input_fd, buffer, BUFFER_SIZE);
+    if (read_result < 0) {
+      free(buffer);
+      perror("read");
+      exit(EXIT_FAILURE);
+    }
+    write(output_fd, buffer, read_result);
+  } while((read_result != 0) || (read_result == BUFFER_SIZE -1));
+  
+  close(input_fd);
+  free(buffer);
+
+  if (lstat(to_add, &sb) < 0) {
+    perror("lstat");
     exit(EXIT_FAILURE);
   }
-  /* returns 0 if it's not a directory */
-  return S_ISDIR(sb.st_mode);
+  size = sb.st_size;
+  /* writing the ending null bytes */
+  if (size < 512) {
+    num_nulls_to_write = BODY_CHECK_LEN - size;
+    ending_nulls = (char *)calloc(num_nulls_to_write, 1);
+  }
+  else {
+    num_nulls_to_write = 2;
+    ending_nulls = (char *)calloc(num_nulls_to_write, 1);
+  }
+  write(output_fd, ending_nulls, num_nulls_to_write);
+  free(ending_nulls);
 }

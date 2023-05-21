@@ -2,13 +2,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <fcntl.h>
 #include "encode.h"
-#include "decode.h"
-#include "integer.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <libgen.h>
+#include <fcntl.h>
+
+/* TEST FILE */
 
 typedef enum { false, true } bool;
 extern char *optarg;
@@ -21,7 +18,7 @@ void usage() {
 int main(int argc, char *argv[]) {
   char opt;
   int i = 0;
-  struct stat sb;
+  // char *path;
 
   /* Option flags */
   char *output = NULL;
@@ -31,8 +28,9 @@ int main(int argc, char *argv[]) {
        verbose = false, 
        strict = false;
 
-  if (argc <= 2)
+  if (argc <= 3) {
     usage();
+  }
 
   /* Parse options and update flags */
   while ((opt = argv[1][i++])) {
@@ -68,34 +66,16 @@ int main(int argc, char *argv[]) {
   // printf("this is the path: %s\n", path);
   // directories_traversal(path);
 
-  if (create_archive) {
-    int output_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (output_fd < 0) {
-      perror("open");
-      exit(EXIT_FAILURE);
-    }
-
-    if (lstat(argv[3], &sb) < 0) {
-      perror("lstat");
-      exit(EXIT_FAILURE);
-    }
-    if (!(S_ISDIR(sb.st_mode))) {
-      add_to_tarfile(argv[3], output_fd);
-    }
-    else {
-      traverse_directory(argv[3], output_fd);
-    }
-
-    close(output_fd);
+  char *header = create_archive_header(argv[3]);
+  for (i = 0; i < HEADER_LEN; i ++) {
+    if (header[i])
+      printf("%x ", header[i]);
+    else
+      printf("_");
   }
+  printf("\n");
+  int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  write(fd_out, header, HEADER_LEN);
 
-  /** Testing decode **/
-  if (extract_contents) {
-    int fd_in = open(argv[2], O_RDONLY);
-    char *test = malloc(512);
-    read(fd_in, test, 512);
-    struct header info;
-    read_archive_header(test, &info);
-  }
   return 0;
 }
