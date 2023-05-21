@@ -4,3 +4,4 @@
 *.o
 .vscode
 mytar.dSYM/Contents
+*.out

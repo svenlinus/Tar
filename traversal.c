@@ -42,6 +42,6 @@ void traverse_directory(char *path) {
 }
 
 int main(int argc, char **argv) {
-    traverse_directory(argv[1]);
+    traverse_directory("traversal.dSYM");
     return 0;
 }
