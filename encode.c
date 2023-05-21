@@ -251,7 +251,6 @@ void traverse_directory(char *path, int output_fd) {
 
 void add_to_tarfile(char *to_add, int output_fd) {
   char *curr_header = create_archive_header(to_add);
-  char *ending = "\0\0";
   int read_result;
   int input_fd;
   char *buffer = (char *)malloc(BUFFER_SIZE);

@@ -69,9 +69,24 @@ int main(int argc, char *argv[]) {
   // directories_traversal(path);
 
   if (create_archive) {
-    char *header = create_archive_header(argv[3]);
-    int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    write(fd_out, header, HEADER_LEN);
+    int output_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (output_fd < 0) {
+      perror("open");
+      exit(EXIT_FAILURE);
+    }
+
+    if (lstat(argv[3], &sb) < 0) {
+      perror("lstat");
+      exit(EXIT_FAILURE);
+    }
+    if (!(S_ISDIR(sb.st_mode))) {
+      add_to_tarfile(argv[3], output_fd);
+    }
+    else {
+      traverse_directory(argv[3], output_fd);
+    }
+
+    close(output_fd);
   }
 
   /** Testing decode **/
