@@ -27,7 +27,11 @@
 void int_to_octal(int input, char *result, size_t size) {
   /* Converts an integer into and octal string and pads the start with 0's */
   int i, len;
-  char *octal = malloc(size);
+  char *octal;
+  if (!(octal = malloc(size))) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
   sprintf(octal, "%o", input);
   if ((len = strlen(octal)) > size-1) {
     fprintf(stderr, "Can't create header: Octal %s too large", octal);
@@ -37,14 +41,19 @@ void int_to_octal(int input, char *result, size_t size) {
     result[i] = '0';
   strcpy(result + i, octal);
   result[size - 1] = '\0';
+  free(octal);
 }
 
 char *create_archive_header(char *file_path) {
   /* Writes the archive header for one file, returns pointer to header */
-  char *header = calloc(BLOCK_SIZE, sizeof(char *));
+  char *header;
   char prefix[155];
   int header_index = 0;
   int i;
+  if (!(header = calloc(BLOCK_SIZE, sizeof(char *)))) {
+    perror("calloc");
+    exit(EXIT_FAILURE);
+  }
 
   /** Write file name **/
   for (i = 0; i < 155; i ++)
@@ -255,7 +264,7 @@ void add_to_tarfile(char *to_add, int output_fd) {
   char *curr_header = create_archive_header(to_add);
   int read_result;
   int input_fd;
-  char *buffer = (char *)malloc(BLOCK_SIZE);
+  char *buffer;
   char *ending_nulls;
   struct stat sb;
   int size;
@@ -263,8 +272,14 @@ void add_to_tarfile(char *to_add, int output_fd) {
   int iterations = 0;
   int num_null_to_add;
 
+  if (!(buffer = malloc(BLOCK_SIZE))) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
+
   /* write the header */
   write(output_fd, curr_header, BLOCK_SIZE);
+  free(curr_header);
 
   if (lstat(to_add, &sb) < 0) {
     perror("lstat");
@@ -288,7 +303,6 @@ void add_to_tarfile(char *to_add, int output_fd) {
         iterations++;
       } while((read_result != 0) || (read_result == BLOCK_SIZE -1));
       close(input_fd);
-      free(buffer);
     }
   
     size = sb.st_size;
@@ -296,10 +310,14 @@ void add_to_tarfile(char *to_add, int output_fd) {
     if (is_empty_file == 0) {
       num_null_to_add = BLOCK_SIZE - (size % BLOCK_SIZE);
       if (num_null_to_add != 0) {
-        ending_nulls = (char *)calloc(num_null_to_add, 1);
+        if (!(ending_nulls = calloc(num_null_to_add, 1))) {
+          perror("calloc");
+          exit(EXIT_FAILURE);
+        }
         write(output_fd, ending_nulls, num_null_to_add);
         free(ending_nulls);
       }
     }
   }
+  free(buffer);
 }

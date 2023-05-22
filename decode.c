@@ -227,7 +227,11 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
   int skip_flag = 0;
 
   /* buffer to read in blocks at a time */
-  char *read_buffer = (char *)malloc(BLOCK_SIZE);
+  char *read_buffer;
+  if (!(read_buffer = malloc(BLOCK_SIZE))) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
 
   /* opening the tarfile to read from it*/
   int tar_fd = open(tarfile_name, O_RDONLY);
@@ -284,7 +288,10 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
         perms = 0777;
       }
       if (curr_size > 0) {
-        curr_body_buffer = (char *)malloc(curr_size);
+        if (!(curr_body_buffer = malloc(curr_size))) {
+          perror("malloc");
+          exit(EXIT_FAILURE);
+        }
         num_bytes_read = read(tar_fd, curr_body_buffer, curr_size);
         if (num_bytes_read < 0) {
           perror("read");

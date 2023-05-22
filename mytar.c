@@ -101,9 +101,14 @@ int main(int argc, char *argv[]) {
         traverse_directory(temp, fd_out, verbose);
       }
     }
-    char *two_null_blocks = (char *)calloc(BLOCK_SIZE * 2, 1);
+    char *two_null_blocks;
+    if (!(two_null_blocks = calloc(BLOCK_SIZE * 2, 1))) {
+      perror("calloc");
+      exit(EXIT_FAILURE);
+    }
     write(fd_out, two_null_blocks, BLOCK_SIZE * 2);
     close(fd_out);
+    free(two_null_blocks);
   }
   else if (extract_contents) {
     if (argc > 3) {
