@@ -14,5 +14,5 @@ struct header {
 
 long int octal_to_int(char *input, size_t size);
 void read_archive_header(char *header, struct header *info, bool strict);
-void list_contents(int fd, bool verbose, int num_files, char *files[]);
+void list_contents(int fd, bool verbose);
 void extraction(char *tarfile_name, bool strict, bool verbose);

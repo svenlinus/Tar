@@ -154,8 +154,6 @@ void extraction(char *tarfile_name, bool strict, bool verbose) {
   char *curr_name;
   char *curr_body_buffer;
   int num_bytes_read, num_bytes_written;
-  int output_fd;
-  int iterations = 0;
   int offset;
   int curr_type;
   struct stat sb;
