@@ -5,12 +5,10 @@
 #include <fcntl.h>
 #include "encode.h"
 #include "decode.h"
-#include "integer.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <libgen.h>
 
-typedef enum { false, true } bool;
 extern char *optarg;
 
 void usage() {
@@ -96,7 +94,7 @@ int main(int argc, char *argv[]) {
     char *test = malloc(512);
     read(fd_in, test, 512);
     struct header info;
-    read_archive_header(test, &info);
+    read_archive_header(test, &info, strict);
   }
   return 0;
 }

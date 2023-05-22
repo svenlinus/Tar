@@ -14,7 +14,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-
 #ifndef PATH_MAX
   #define PATH_MAX 2048
 #endif
@@ -51,6 +50,8 @@ char *create_archive_header(char *file_path) {
   int i;
 
   /** Write file name **/
+  for (i = 0; i < 155; i ++)
+    prefix[i] = '\0';
   int path_len;
   if ((path_len = strlen(file_path)) > 255) {
       fprintf(stderr, "File path %s too long", file_path);

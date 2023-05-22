@@ -5,10 +5,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "decode.h"
-#include "integer.h"
 #include "encode.h"
 
-void read_archive_header(char *header, struct header *info) {
+void read_archive_header(char *header, struct header *info, bool strict) {
   /* Extracts desired header fields and stores the data in `info` */
   int header_index = 0;
   int i;
@@ -87,12 +86,14 @@ void read_archive_header(char *header, struct header *info) {
   header_index += 6;
 
   /** Read version **/
-  char version[3];
-  strncpy(version, header + header_index, 2);
-  version[2] = '\0';
-  if (strcmp(version, "00")) {
-    fprintf(stderr, "Corrupt version\nexp: 00 act: %s\n", version);
-    exit(EXIT_FAILURE);
+  if (strict) {
+    char version[3];
+    strncpy(version, header + header_index, 2);
+    version[2] = '\0';
+    if (strcmp(version, "00")) {
+      fprintf(stderr, "Corrupt version\nexp: 00 act: %s\n", version);
+      exit(EXIT_FAILURE);
+    }
   }
   header_index += 2;
 
