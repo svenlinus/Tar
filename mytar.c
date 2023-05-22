@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
       perror("open");
       exit(EXIT_FAILURE);
     }
-    list_contents(fd_in, verbose);
+    list_contents(fd_in, verbose, argc - 3, argc > 3 ? argv + 3 : NULL);
   }
   else if (create_archive) {
     int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -93,21 +93,16 @@ int main(int argc, char *argv[]) {
     if (!(S_ISDIR(sb.st_mode))) {
       add_to_tarfile(argv[3], fd_out);
     }
-    else {
-      if (lstat(argv[3], &sb) < 0) {
-        perror("lstat");
-        exit(EXIT_FAILURE);
-      }
-      if (S_ISDIR(sb.st_mode)) {
-        char temp[256];
-        strcpy(temp, argv[3]);
+    else if (S_ISDIR(sb.st_mode)) {
+      char temp[256];
+      strcpy(temp, argv[3]);
+      if (temp[strlen(temp) - 1] != '/')
         strcat(temp, "/");
-        add_to_tarfile(temp, fd_out);
-      }
-      traverse_directory(argv[3], fd_out);
+      add_to_tarfile(temp, fd_out);
+      traverse_directory(temp, fd_out);
     }
-    char *two_null_blocks = (char *)calloc(BLOCK_LEN * 2, 1);
-    write(fd_out, two_null_blocks, BLOCK_LEN * 2);
+    char *two_null_blocks = (char *)calloc(BLOCK_SIZE * 2, 1);
+    write(fd_out, two_null_blocks, BLOCK_SIZE * 2);
     close(fd_out);
   }
   else if (extract_contents) {

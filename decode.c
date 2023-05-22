@@ -114,14 +114,14 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   // printf("%s %s %s %s\n", info->linkname, info->uname, info->gname, info->prefix);
 }
 
-void list_contents(int fd, bool verbose) {
+void list_contents(int fd, bool verbose, int num_files, char *files[]) {
   char header[BLOCK_SIZE];
   char path[257];
+  int i;
   if (read(fd, header, BLOCK_SIZE) < 0) {
     perror("read");
     exit(EXIT_FAILURE);
   }
-  int test = open("test", O_RDONLY | O_CREAT | O_TRUNC, 0644);
   while (strlen(header) > 0) {
     struct header info;
     read_archive_header(header, &info, false);
@@ -134,7 +134,19 @@ void list_contents(int fd, bool verbose) {
     /* Add null terminator if necessary */
     if (path[255])
       path[256] = '\0';
-    printf("%s\n", path);
+    /* Print entry if desired */
+    for (i = 0; i < num_files; i ++) {
+      char temp[257];
+      strcpy(temp, files[i]);
+      if (temp[strlen(temp) - 1] != '/')
+        strcat(temp, "/");
+      if (strncmp(temp, path, strlen(temp)) == 0) {
+        printf("%s\n", path);
+        break;
+      }
+    }
+    if (num_files == 0)
+      printf("%s\n", path);
     /* Seek to next header */
     int distance = info.stat.st_size ? info.stat.st_size / BLOCK_SIZE + 1 : 0;
     lseek(fd, distance * BLOCK_SIZE, SEEK_CUR);
@@ -143,7 +155,6 @@ void list_contents(int fd, bool verbose) {
       perror("read");
       exit(EXIT_FAILURE);
     }
-    write(test, header, BLOCK_SIZE);
   }
 }
 

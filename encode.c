@@ -198,7 +198,7 @@ char *create_archive_header(char *file_path) {
   /* Location to write chksum: */
   header_index = 148;
   for (i = 0; i < BLOCK_SIZE; i ++) {
-    sum += header[i];
+    sum += (unsigned char)header[i];
   }
   /* Add spaces (32) occupying the 8 chksum bytes (32 * 8) */
   sum += 256;
@@ -210,41 +210,43 @@ char *create_archive_header(char *file_path) {
 }
 
 void traverse_directory(char *path, int output_fd) {
-    DIR *dir;
-    struct dirent *dir_read;
-    struct stat stat_buffer;
-    dir = opendir(path);
-    if (dir == NULL) {
-        perror("opendir");
-        exit(EXIT_FAILURE);
+  DIR *dir;
+  struct dirent *dir_read;
+  struct stat stat_buffer;
+  dir = opendir(path);
+  if (dir == NULL) {
+    perror("opendir");
+    exit(EXIT_FAILURE);
+  }
+  while((dir_read = readdir(dir)) != NULL) {
+    /* skipping over self and parent */
+    if (strcmp(dir_read->d_name, ".") == 0 
+    || strcmp(dir_read->d_name, "..") == 0) {
+      continue;
     }
-    while((dir_read = readdir(dir)) != NULL) {
-        /* skipping over self and parent */
-        if (strcmp(dir_read->d_name, ".") == 0 
-        || strcmp(dir_read->d_name, "..") == 0) {
-            continue;
-        }
 
-        /* getting the path of the current child */
-        char new_path[256];
-        strcpy(new_path, path);
-        strcat(new_path, "/");
-        strcat(new_path, dir_read->d_name);
+    /* getting the path of the current child */
+    char new_path[256];
+    strcpy(new_path, path);
+    strcat(new_path, dir_read->d_name);
 
-        /* dealing with the curr child */
-        printf("%s\n", new_path);
-        add_to_tarfile(new_path, output_fd);
-
-        /* recurses with the new path */
-        if (lstat(new_path, &stat_buffer) < 0) {
-            perror("lstat");
-            exit(EXIT_FAILURE);
-        }
-        if (S_ISDIR(stat_buffer.st_mode)) {
-            traverse_directory(new_path, output_fd);
-        }
+    if (lstat(new_path, &stat_buffer) < 0) {
+      perror("lstat");
+      exit(EXIT_FAILURE);
     }
-    closedir(dir);
+    if (S_ISDIR(stat_buffer.st_mode))
+      strcat(new_path, "/");
+
+    /* dealing with the curr child */
+    printf("%s\n", new_path);
+    add_to_tarfile(new_path, output_fd);
+
+    /* recurses with the new path */
+    if (S_ISDIR(stat_buffer.st_mode)) {
+      traverse_directory(new_path, output_fd);
+    }
+  }
+  closedir(dir);
 }
 
 void add_to_tarfile(char *to_add, int output_fd) {
@@ -290,7 +292,7 @@ void add_to_tarfile(char *to_add, int output_fd) {
     size = sb.st_size;
     /* writing the ending null bytes */
     if (is_empty_file == 0) {
-      num_null_to_add = size % BLOCK_SIZE;
+      num_null_to_add = BLOCK_SIZE - (size % BLOCK_SIZE);
       if (num_null_to_add != 0) {
         ending_nulls = (char *)calloc(num_null_to_add, 1);
         write(output_fd, ending_nulls, num_null_to_add);
@@ -298,5 +300,4 @@ void add_to_tarfile(char *to_add, int output_fd) {
       }
     }
   }
-  
 }
