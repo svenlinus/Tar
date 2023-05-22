@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "integer.h"
+#include "functions.h"
 #include <sys/stat.h>
 #include <dirent.h>
 #include <libgen.h>
@@ -23,7 +23,6 @@
 #define BLOCK_SIZE 512
 
 
-void add_to_tarfile(char *to_add, int output_fd);
 
 void int_to_octal(int input, char *result, size_t size) {
   /* Converts an integer into and octal string and pads the start with 0's */
@@ -209,7 +208,9 @@ char *create_archive_header(char *file_path) {
   return header;
 }
 
-void traverse_directory(char *path, int output_fd) {
+void add_to_tarfile(char *to_add, int output_fd);
+
+void traverse_directory(char *path, int output_fd, bool verbose) {
   DIR *dir;
   struct dirent *dir_read;
   struct stat stat_buffer;
@@ -238,12 +239,13 @@ void traverse_directory(char *path, int output_fd) {
       strcat(new_path, "/");
 
     /* dealing with the curr child */
-    printf("%s\n", new_path);
+    if (verbose)
+      printf("%s\n", new_path);
     add_to_tarfile(new_path, output_fd);
 
     /* recurses with the new path */
     if (S_ISDIR(stat_buffer.st_mode)) {
-      traverse_directory(new_path, output_fd);
+      traverse_directory(new_path, output_fd, verbose);
     }
   }
   closedir(dir);

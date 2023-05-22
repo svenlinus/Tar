@@ -3,8 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include "encode.h"
-#include "decode.h"
+#include "functions.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <libgen.h>
@@ -96,10 +95,13 @@ int main(int argc, char *argv[]) {
     else if (S_ISDIR(sb.st_mode)) {
       char temp[256];
       strcpy(temp, argv[3]);
+      /* Add '/' if user didn't include one */
       if (temp[strlen(temp) - 1] != '/')
         strcat(temp, "/");
+      if (verbose)
+        printf("%s\n", temp);
       add_to_tarfile(temp, fd_out);
-      traverse_directory(temp, fd_out);
+      traverse_directory(temp, fd_out, verbose);
     }
     char *two_null_blocks = (char *)calloc(BLOCK_SIZE * 2, 1);
     write(fd_out, two_null_blocks, BLOCK_SIZE * 2);

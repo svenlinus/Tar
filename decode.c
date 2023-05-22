@@ -1,11 +1,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include <math.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "decode.h"
-#include "encode.h"
+#include "functions.h"
 
 void read_archive_header(char *header, struct header *info, bool strict) {
   /* Extracts desired header fields and stores the data in `info` */
@@ -114,6 +114,48 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   // printf("%s %s %s %s\n", info->linkname, info->uname, info->gname, info->prefix);
 }
 
+void print_entry(char *name, struct header info, bool verbose) {
+  if (verbose) {
+    /* Type */
+    switch (info.typeflag) {
+      case '5':
+        printf("d");
+        break;
+      case '2':
+        printf("1");
+        break;
+      default:
+        printf("-");
+        break;
+    }
+    /* Permissions */
+    int i, mask = 0x100;
+    char perms[9] = "rwxrwxrwx";
+    for (i = 0; i < 9; i ++) {
+      if (info.stat.st_mode & (mask >> i))
+        printf("%c", perms[i]);
+      else
+        printf("-");
+    }
+    /* Uname/gname */
+    printf(" %s/%s", info.uname, info.gname);
+    /* Size */
+    char size[8];
+    char spaces[8];
+    sprintf(size, "%d", (int)info.stat.st_size);
+    int len = strlen(size);
+    memset(spaces, ' ', 8 - len);
+    printf("%s%s", spaces, size);
+    /* mtime */
+    struct tm* timeinfo = localtime(&info.stat.st_mtime);
+    char buffer[20];  // Buffer to hold the formatted time
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", timeinfo);
+    printf(" %s ", buffer);
+  }
+  /* Print name */
+  printf("%s\n", name);
+}
+
 void list_contents(int fd, bool verbose, int num_files, char *files[]) {
   char header[BLOCK_SIZE];
   char path[257];
@@ -138,15 +180,16 @@ void list_contents(int fd, bool verbose, int num_files, char *files[]) {
     for (i = 0; i < num_files; i ++) {
       char temp[257];
       strcpy(temp, files[i]);
+      /* Add '/' if user didn't include one */
       if (temp[strlen(temp) - 1] != '/')
         strcat(temp, "/");
       if (strncmp(temp, path, strlen(temp)) == 0) {
-        printf("%s\n", path);
+        print_entry(path, info, verbose);
         break;
       }
     }
     if (num_files == 0)
-      printf("%s\n", path);
+      print_entry(path, info, verbose);
     /* Seek to next header */
     int distance = info.stat.st_size ? info.stat.st_size / BLOCK_SIZE + 1 : 0;
     lseek(fd, distance * BLOCK_SIZE, SEEK_CUR);
