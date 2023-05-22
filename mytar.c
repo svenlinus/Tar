@@ -106,8 +106,8 @@ int main(int argc, char *argv[]) {
       }
       traverse_directory(argv[3], fd_out);
     }
-    char *two_null_blocks = (char *)calloc(BLOCK_LEN * 2, 1);
-    write(fd_out, two_null_blocks, BLOCK_LEN * 2);
+    char *two_null_blocks = (char *)calloc(BLOCK_SIZE * 2, 1);
+    write(fd_out, two_null_blocks, BLOCK_SIZE * 2);
     close(fd_out);
   }
   else if (extract_contents) {

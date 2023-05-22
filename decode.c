@@ -147,6 +147,92 @@ void list_contents(int fd, bool verbose) {
   }
 }
 
+void extraction(char *tarfile_name, bool strict, bool verbose) {
+  int curr_output_fd;
+  struct header info;
+  int curr_size;
+  char *curr_name;
+  char *curr_body_buffer;
+  int num_bytes_read, num_bytes_written;
+  int output_fd;
+  int iterations = 0;
+  int offset;
+  int curr_type;
+  struct stat sb;
+  int perms = 0666;
+
+  /* buffer to read in blocks at a time */
+  char *read_buffer = (char *)malloc(BLOCK_SIZE);
+
+  /* opening the tarfile to read from it*/
+  int tar_fd = open(tarfile_name, O_RDONLY);
+  if (tar_fd < 0) {
+    perror("open");
+    exit(EXIT_FAILURE);
+  }
+
+  /* go through the tarfile one block at a time */
+  do {
+    /* read a block */
+    num_bytes_read = read(tar_fd, read_buffer, BLOCK_SIZE);
+    if (num_bytes_read < 0) {
+      perror("read");
+      exit(EXIT_FAILURE);
+    }
+    /* check that the first byte isn't null */
+    if (read_buffer[0] != '\0') {
+
+      /* get information about the dir/file */
+      read_archive_header(read_buffer, &info, strict);
+      curr_name = info.name;
+      curr_size = info.stat.st_size;
+      curr_type = info.typeflag;
+      if (verbose) {
+        printf("%s\n", curr_name);
+      }
+      /* case for a symlink */
+      if (curr_type == 2) {
+        curr_name = info.linkname;
+      }
+      /* case for a directory, continue */
+      if (curr_type == 5) {
+        /* making the dir */
+        if (lstat(curr_name, &sb) == -1) {
+          mkdir(curr_name, 0777);
+        }
+        continue;
+      }
+      /* open the un-tarred file */
+      /* DO THE PERMS WORK??? NO */
+      if (info.stat.st_mode & 0111) {
+        perms = 0777;
+      }
+      curr_output_fd = open(curr_name, O_WRONLY | O_CREAT | O_TRUNC, perms);
+      if (curr_size > 0) {
+        curr_body_buffer = (char *)malloc(curr_size);
+        num_bytes_read = read(tar_fd, curr_body_buffer, curr_size);
+        if (num_bytes_read < 0) {
+          perror("read");
+          exit(EXIT_FAILURE);
+        }
+        num_bytes_written = write(curr_output_fd, curr_body_buffer, curr_size);
+        if (num_bytes_written < 0) {
+          perror("write");
+          exit(EXIT_FAILURE);
+        }
+        free(curr_body_buffer);
+        if (curr_size != BLOCK_SIZE) {
+          offset = BLOCK_SIZE - (BLOCK_SIZE % curr_size);
+          lseek(tar_fd, offset, SEEK_CUR);
+        }
+      }
+      close(curr_output_fd);
+    }
+  } while(read_buffer[0] != '\0');
+  close(tar_fd);
+  free(read_buffer);
+}
+
 long int octal_to_int(char *input, size_t size) {
   /* Converts an octal string into integer */
   unsigned int i, octal;
