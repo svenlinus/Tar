@@ -209,6 +209,116 @@ void list_contents(int fd, bool verbose, int num_files, char *files[]) {
   }
 }
 
+void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
+
+  int curr_output_fd;
+  struct header info;
+  int curr_size;
+  char *curr_name;
+  char *curr_body_buffer;
+  int num_bytes_read, num_bytes_written;
+  int offset;
+  int curr_type;
+  struct stat sb;
+  int perms = 0666;
+  int null_block;
+  int curr_mode;
+  int i;
+  int skip_flag = 0;
+
+  /* buffer to read in blocks at a time */
+  char *read_buffer = (char *)malloc(BLOCK_SIZE);
+
+  /* opening the tarfile to read from it*/
+  int tar_fd = open(tarfile_name, O_RDONLY);
+  if (tar_fd < 0) {
+    perror("open");
+    exit(EXIT_FAILURE);
+  }
+
+  /* go through the tarfile one block at a time */
+  do {
+    skip_flag = 0;
+    /* read a block */
+    num_bytes_read = read(tar_fd, read_buffer, BLOCK_SIZE);
+    /* printf("num_bytes_read: %d\n", num_bytes_read); */
+    if (num_bytes_read < 0) {
+      perror("read");
+      exit(EXIT_FAILURE);
+    }
+    /* check that the first byte isn't null */
+    if (read_buffer[0] != '\0') {
+
+      /* get information about the dir/file */
+      read_archive_header(read_buffer, &info, strict);
+      curr_name = info.name;
+
+      curr_mode = info.stat.st_mode;
+      if (spec != NULL) {
+        if (S_ISDIR(curr_mode) && spec[strlen(spec) - 1] != '/')
+          strcat(spec, "/");
+        if (strncmp(spec, curr_name, strlen(spec)) != 0) {
+          skip_flag = 1;
+        }
+      }
+
+      curr_size = info.stat.st_size;
+      curr_type = info.typeflag;
+      if (verbose) {
+        printf("%s\n", curr_name);
+      }
+      /* case for a symlink */
+      if (curr_type == 2) {
+        curr_name = info.linkname;
+      }
+      /* case for a directory, continue */
+      if (curr_type == 5) {
+        /* making the dir */
+        if (lstat(curr_name, &sb) == -1) {
+          mkdir(curr_name, 0777);
+        }
+        continue;
+      }
+      /* open the un-tarred file */
+      if (info.stat.st_mode & 0111) {
+        perms = 0777;
+      }
+      if (curr_size > 0) {
+        curr_body_buffer = (char *)malloc(curr_size);
+        num_bytes_read = read(tar_fd, curr_body_buffer, curr_size);
+        if (num_bytes_read < 0) {
+          perror("read");
+          exit(EXIT_FAILURE);
+        }
+        /* checks if we should be writing or not */
+        if (skip_flag == 0) {
+          curr_output_fd = open(curr_name, O_WRONLY | O_CREAT | O_TRUNC, perms);
+          num_bytes_written = write(curr_output_fd, curr_body_buffer, curr_size);
+          if (num_bytes_written < 0) {
+            perror("write");
+            exit(EXIT_FAILURE);
+          }
+          close(curr_output_fd);
+        }
+        free(curr_body_buffer);
+        if (curr_size != BLOCK_SIZE) {
+          offset = BLOCK_SIZE - (curr_size % BLOCK_SIZE);
+          lseek(tar_fd, offset, SEEK_CUR);
+        }
+      }
+    }
+    null_block = 1;
+    for (i=0; i<BLOCK_SIZE; i++) {
+      if (read_buffer[i] != '\0') {
+        null_block = 0;
+        break;
+      }
+    }
+  } while(null_block == 0);
+  close(tar_fd);
+  free(read_buffer);
+}
+
 int octal_len(char *octal) {
   /* Calculates length of octal number. Non digit terminating */
   int len = 0;

@@ -18,6 +18,7 @@ void usage() {
 int main(int argc, char *argv[]) {
   char opt;
   int i = 0;
+  int j;
   struct stat sb;
 
   /* Option flags */
@@ -105,15 +106,22 @@ int main(int argc, char *argv[]) {
     close(fd_out);
   }
   else if (extract_contents) {
-    int fd_in = open(argv[2], O_RDONLY);
-    if (fd_in < 0) {
-      perror("open");
-      exit(EXIT_FAILURE);
+    if (argc > 3) {
+      int num_specs = argc - 3;
+      char spec[num_specs][256];
+      for (i=0; i<num_specs; i++) {
+        for (j=0; j<256; j++) {
+          spec[i][j] = '\0';
+        }
+      }
+      for (i=0; i<num_specs; i++) {
+        strcpy(spec[i], argv[i+3]);
+        extraction(argv[2], strict, verbose, spec[i]);
+      }
     }
-    char *test = malloc(512);
-    read(fd_in, test, 512);
-    struct header info;
-    read_archive_header(test, &info, strict);
+    else {
+      extraction(argv[2], strict, verbose, NULL);
+    }
   }
   return 0;
 }
