@@ -19,7 +19,7 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   /** Read mode **/
   char mode[8];
   strncpy(mode, header + header_index, 8);
-  info->stat.st_mode = octal_to_int(mode, 8);
+  info->stat.st_mode = octal_to_int(mode);
   header_index += 8;
 
   /** Read UID **/
@@ -28,30 +28,30 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   if (len < 7)
     info->stat.st_uid = extract_special_int(header + header_index, 8);
   else 
-    info->stat.st_uid = octal_to_int(id, 8);
+    info->stat.st_uid = octal_to_int(id);
   header_index += 8;
 
   /** Read GID **/
   strncpy(id, header + header_index, 8);
-  info->stat.st_gid = octal_to_int(id, 8);
+  info->stat.st_gid = octal_to_int(id);
   header_index += 8;
 
   /** Read size **/
   char size[12];
   strncpy(size, header + header_index, 12);
-  info->stat.st_size = octal_to_int(size, 12);
+  info->stat.st_size = octal_to_int(size);
   header_index += 12;
 
   /** Read mtime **/
   char mtime[12];
   strncpy(mtime, header + header_index, 12);
-  info->stat.st_mtime = octal_to_int(mtime, 12);
+  info->stat.st_mtime = octal_to_int(mtime);
   header_index += 12;
 
   /** Read chksum **/
   char chksum[8];
   strncpy(chksum, header + header_index, 8);
-  info->chksum = octal_to_int(chksum, 8);
+  info->chksum = octal_to_int(chksum);
   /* Fill chksum field with spaces */
   memset(header + header_index, ' ', 8);
   header_index += 8;
@@ -60,8 +60,6 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   for (i = 0; i < BLOCK_SIZE; i ++) {
     sum += (unsigned char)header[i];
   }
-  if (sum != info->chksum)
-    info->chksum = octal_to_int(chksum, 7);
   /* If the actual sum doesn't match the header chksum, then the header is 
   corrupted */
   if (sum != info->chksum) {
@@ -211,13 +209,22 @@ void list_contents(int fd, bool verbose, int num_files, char *files[]) {
   }
 }
 
-long int octal_to_int(char *input, size_t size) {
+int octal_len(char *octal) {
+  /* Calculates length of octal number. Non digit terminating */
+  int len = 0;
+  while (octal[len] - '0' >= 0 && octal[len] - '0' <= 9)
+    len ++;
+  return len;
+}
+
+long int octal_to_int(char *input) {
   /* Converts an octal string into integer */
   unsigned int i, octal;
   unsigned long int result = 0;
-  for (i = 0; i < size-1; i ++) {
+  int len = octal_len(input);
+  for (i = 0; i < len; i ++) {
     octal = (input[i] - '0') & 07;
-    result |= octal << ((size - 2 - i) * 3);
+    result |= octal << ((len - 1 - i) * 3);
   }
   return result;
 }
