@@ -110,8 +110,8 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   strncpy(info->prefix, header + header_index, 155);
   header_index += 155;
 
-  printf("%s %d %d %d %d %d %d %c\n", info->name, info->stat.st_mode, info->stat.st_uid, info->stat.st_gid, (int)info->stat.st_size, (int)info->stat.st_mtime, info->chksum, info->typeflag);
-  printf("%s %s %s %s\n\n", info->linkname, info->uname, info->gname, info->prefix);
+  // printf("%s %d %d %d %d %d %d %c\n", info->name, info->stat.st_mode, info->stat.st_uid, info->stat.st_gid, (int)info->stat.st_size, (int)info->stat.st_mtime, info->chksum, info->typeflag);
+  // printf("%s %s %s %s\n", info->linkname, info->uname, info->gname, info->prefix);
 }
 
 void list_contents(int fd, bool verbose) {
@@ -121,6 +121,7 @@ void list_contents(int fd, bool verbose) {
     perror("read");
     exit(EXIT_FAILURE);
   }
+  int test = open("test", O_RDONLY | O_CREAT | O_TRUNC, 0644);
   while (strlen(header) > 0) {
     struct header info;
     read_archive_header(header, &info, false);
@@ -135,15 +136,14 @@ void list_contents(int fd, bool verbose) {
       path[256] = '\0';
     printf("%s\n", path);
     /* Seek to next header */
-    int distance = (info.stat.st_size - 1) / BLOCK_SIZE + 1;
+    int distance = info.stat.st_size ? info.stat.st_size / BLOCK_SIZE + 1 : 0;
     lseek(fd, distance * BLOCK_SIZE, SEEK_CUR);
     /* Read next header */
     if (read(fd, header, BLOCK_SIZE) < 0) {
       perror("read");
       exit(EXIT_FAILURE);
     }
-    printf("%d\n", distance * BLOCK_SIZE);
-    printf("%x\n", header[distance * BLOCK_SIZE]);
+    write(test, header, BLOCK_SIZE);
   }
 }
 

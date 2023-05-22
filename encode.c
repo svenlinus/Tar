@@ -206,7 +206,6 @@ char *create_archive_header(char *file_path) {
   for (i = 0; i < 8; i ++) {
     header[header_index + i] = chksum[i];
   }
-
   return header;
 }
 
@@ -254,9 +253,11 @@ void add_to_tarfile(char *to_add, int output_fd) {
   int input_fd;
   char *buffer = (char *)malloc(BLOCK_SIZE);
   char *ending_nulls;
-  int num_nulls_to_write;
   struct stat sb;
   int size;
+  int is_empty_file = 0;
+  int iterations = 0;
+  int num_null_to_add;
 
   /* write the header */
   write(output_fd, curr_header, BLOCK_SIZE);
@@ -265,34 +266,37 @@ void add_to_tarfile(char *to_add, int output_fd) {
     perror("lstat");
     exit(EXIT_FAILURE);
   }
-
-  if (S_ISREG(sb.st_mode)) {
-    /* write the file contents */
-    input_fd = open(to_add, O_RDONLY);
-    do {
-      read_result = read(input_fd, buffer, BLOCK_SIZE);
-      if (read_result < 0) {
-        free(buffer);
-        perror("read");
-        exit(EXIT_FAILURE);
+  if (!(S_ISDIR(sb.st_mode))) {
+    if (S_ISREG(sb.st_mode)) {
+      /* write the file contents */
+      input_fd = open(to_add, O_RDONLY);
+      do {
+        read_result = read(input_fd, buffer, BLOCK_SIZE);
+        if (read_result < 0) {
+          free(buffer);
+          perror("read");
+          exit(EXIT_FAILURE);
+        }
+        if ((read_result == 0) && (iterations == 0)) {
+          is_empty_file = 1;
+        }
+        write(output_fd, buffer, read_result);
+        iterations++;
+      } while((read_result != 0) || (read_result == BLOCK_SIZE -1));
+      close(input_fd);
+      free(buffer);
+    }
+  
+    size = sb.st_size;
+    /* writing the ending null bytes */
+    if (is_empty_file == 0) {
+      num_null_to_add = size % BLOCK_SIZE;
+      if (num_null_to_add != 0) {
+        ending_nulls = (char *)calloc(num_null_to_add, 1);
+        write(output_fd, ending_nulls, num_null_to_add);
+        free(ending_nulls);
       }
-      write(output_fd, buffer, read_result);
-    } while((read_result != 0) || (read_result == BLOCK_SIZE -1));
-    close(input_fd);
-    free(buffer);
+    }
   }
 
-  size = sb.st_size;
-  /* writing the ending null bytes */
-  if (size < BLOCK_SIZE) {
-    num_nulls_to_write = BLOCK_SIZE - size;
-    ending_nulls = (char *)calloc(num_nulls_to_write, 1);
-    write(output_fd, ending_nulls, num_nulls_to_write);
-  }
-  else {
-    num_nulls_to_write = 2;
-    ending_nulls = (char *)calloc(num_nulls_to_write * 2, 1);
-    write(output_fd, ending_nulls, num_nulls_to_write * 2);
-  }
-  free(ending_nulls);
 }
