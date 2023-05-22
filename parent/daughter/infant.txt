@@ -1,0 +1,6 @@
+This is a text file for infant. 
+Name: Boss Baby
+Age: 2
+Height: 2 feet
+Favorite color: blue
+Favorite person: mom
