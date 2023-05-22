@@ -201,7 +201,8 @@ void list_contents(int fd, bool verbose, int num_files, char *files[]) {
   }
 }
 
-void extraction(char *tarfile_name, bool strict, bool verbose) {
+void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
+
   int curr_output_fd;
   struct header info;
   int curr_size;
@@ -212,6 +213,10 @@ void extraction(char *tarfile_name, bool strict, bool verbose) {
   int curr_type;
   struct stat sb;
   int perms = 0666;
+  int null_block;
+  int curr_mode;
+  int i;
+  int skip_flag = 0;
 
   /* buffer to read in blocks at a time */
   char *read_buffer = (char *)malloc(BLOCK_SIZE);
@@ -225,8 +230,10 @@ void extraction(char *tarfile_name, bool strict, bool verbose) {
 
   /* go through the tarfile one block at a time */
   do {
+    skip_flag = 0;
     /* read a block */
     num_bytes_read = read(tar_fd, read_buffer, BLOCK_SIZE);
+    /* printf("num_bytes_read: %d\n", num_bytes_read); */
     if (num_bytes_read < 0) {
       perror("read");
       exit(EXIT_FAILURE);
@@ -237,6 +244,16 @@ void extraction(char *tarfile_name, bool strict, bool verbose) {
       /* get information about the dir/file */
       read_archive_header(read_buffer, &info, strict);
       curr_name = info.name;
+
+      curr_mode = info.stat.st_mode;
+      if (spec != NULL) {
+        if (S_ISDIR(curr_mode) && spec[strlen(spec) - 1] != '/')
+          strcat(spec, "/");
+        if (strncmp(spec, curr_name, strlen(spec)) != 0) {
+          skip_flag = 1;
+        }
+      }
+
       curr_size = info.stat.st_size;
       curr_type = info.typeflag;
       if (verbose) {
@@ -255,11 +272,9 @@ void extraction(char *tarfile_name, bool strict, bool verbose) {
         continue;
       }
       /* open the un-tarred file */
-      /* DO THE PERMS WORK??? NO */
       if (info.stat.st_mode & 0111) {
         perms = 0777;
       }
-      curr_output_fd = open(curr_name, O_WRONLY | O_CREAT | O_TRUNC, perms);
       if (curr_size > 0) {
         curr_body_buffer = (char *)malloc(curr_size);
         num_bytes_read = read(tar_fd, curr_body_buffer, curr_size);
@@ -267,20 +282,31 @@ void extraction(char *tarfile_name, bool strict, bool verbose) {
           perror("read");
           exit(EXIT_FAILURE);
         }
-        num_bytes_written = write(curr_output_fd, curr_body_buffer, curr_size);
-        if (num_bytes_written < 0) {
-          perror("write");
-          exit(EXIT_FAILURE);
+        /* checks if we should be writing or not */
+        if (skip_flag == 0) {
+          curr_output_fd = open(curr_name, O_WRONLY | O_CREAT | O_TRUNC, perms);
+          num_bytes_written = write(curr_output_fd, curr_body_buffer, curr_size);
+          if (num_bytes_written < 0) {
+            perror("write");
+            exit(EXIT_FAILURE);
+          }
+          close(curr_output_fd);
         }
         free(curr_body_buffer);
         if (curr_size != BLOCK_SIZE) {
-          offset = BLOCK_SIZE - (BLOCK_SIZE % curr_size);
+          offset = BLOCK_SIZE - (curr_size % BLOCK_SIZE);
           lseek(tar_fd, offset, SEEK_CUR);
         }
       }
-      close(curr_output_fd);
     }
-  } while(read_buffer[0] != '\0');
+    null_block = 1;
+    for (i=0; i<BLOCK_SIZE; i++) {
+      if (read_buffer[i] != '\0') {
+        null_block = 0;
+        break;
+      }
+    }
+  } while(null_block == 0);
   close(tar_fd);
   free(read_buffer);
 }

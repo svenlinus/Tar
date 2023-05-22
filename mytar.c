@@ -18,6 +18,7 @@ void usage() {
 int main(int argc, char *argv[]) {
   char opt;
   int i = 0;
+  int j;
   struct stat sb;
 
   /* Option flags */
@@ -108,7 +109,22 @@ int main(int argc, char *argv[]) {
     close(fd_out);
   }
   else if (extract_contents) {
-    extraction(argv[2], strict, verbose);
+    if (argc > 3) {
+      int num_specs = argc - 3;
+      char spec[num_specs][256];
+      for (i=0; i<num_specs; i++) {
+        for (j=0; j<256; j++) {
+          spec[i][j] = '\0';
+        }
+      }
+      for (i=0; i<num_specs; i++) {
+        strcpy(spec[i], argv[i+3]);
+        extraction(argv[2], strict, verbose, spec[i]);
+      }
+    }
+    else {
+      extraction(argv[2], strict, verbose, NULL);
+    }
   }
   return 0;
 }
