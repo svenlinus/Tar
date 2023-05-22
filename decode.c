@@ -58,7 +58,7 @@ void read_archive_header(char *header, struct header *info) {
   header_index += 8;
   /* Recalculate chksum */
   int sum = 0;
-  for (i = 0; i < HEADER_LEN; i ++) {
+  for (i = 0; i < BLOCK_LEN; i ++) {
     sum += (unsigned char)header[i];
   }
   /* If the actual sum doesn't match the header chksum, then the header is 

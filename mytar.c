@@ -83,10 +83,20 @@ int main(int argc, char *argv[]) {
       add_to_tarfile(argv[3], output_fd);
     }
     else {
-      add_to_tarfile(argv[3], output_fd);
+      if (lstat(argv[3], &sb) < 0) {
+        perror("lstat");
+        exit(EXIT_FAILURE);
+      }
+      if (S_ISDIR(sb.st_mode)) {
+        char temp[256];
+        strcpy(temp, argv[3]);
+        strcat(temp, "/");
+        add_to_tarfile(temp, output_fd);
+      }
       traverse_directory(argv[3], output_fd);
     }
-
+    char *two_null_blocks = (char *)calloc(BLOCK_LEN * 2, 1);
+    write(output_fd, two_null_blocks, BLOCK_LEN * 2);
     close(output_fd);
   }
 
