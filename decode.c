@@ -126,7 +126,7 @@ void print_entry(char *name, struct header info, bool verbose) {
         printf("d");
         break;
       case '2':
-        printf("1");
+        printf("l");
         break;
       default:
         printf("-");
