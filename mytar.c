@@ -58,39 +58,53 @@ int main(int argc, char *argv[]) {
   printf("%s %d %d %d %d %d\n---------\n", output, create_archive, print_contents, extract_contents, verbose, strict);
   if (!output)
     usage();
-  if (!create_archive && !print_contents && !extract_contents)
+  if (create_archive + print_contents + extract_contents > 1) {
+    fprintf(stderr, "You may only choose one of the 'ctx' options.\n");
     usage();
+  }
+  if (create_archive + print_contents + extract_contents < 1) {
+    fprintf(stderr, "you must choose one of the 'ctx' options.\n");
+    usage();
+  }
 
   /* passing the path through the traversal function */
   // path = argv[3];
   // printf("this is the path: %s\n", path);
   // directories_traversal(path);
 
-  if (create_archive) {
-    int output_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (output_fd < 0) {
+  if (print_contents) {
+    int fd_in = open(argv[2], O_RDONLY);
+    if (fd_in < 0) {
       perror("open");
       exit(EXIT_FAILURE);
     }
-
+    list_contents(fd_in, verbose);
+  }
+  else if (create_archive) {
+    int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd_out < 0) {
+      perror("open");
+      exit(EXIT_FAILURE);
+    }
     if (lstat(argv[3], &sb) < 0) {
       perror("lstat");
       exit(EXIT_FAILURE);
     }
     if (!(S_ISDIR(sb.st_mode))) {
-      add_to_tarfile(argv[3], output_fd);
+      add_to_tarfile(argv[3], fd_out);
     }
     else {
-      add_to_tarfile(argv[3], output_fd);
-      traverse_directory(argv[3], output_fd);
+      add_to_tarfile(argv[3], fd_out);
+      traverse_directory(argv[3], fd_out);
     }
-
-    close(output_fd);
+    close(fd_out);
   }
-
-  /** Testing decode **/
-  if (extract_contents) {
+  else if (extract_contents) {
     int fd_in = open(argv[2], O_RDONLY);
+    if (fd_in < 0) {
+      perror("open");
+      exit(EXIT_FAILURE);
+    }
     char *test = malloc(512);
     read(fd_in, test, 512);
     struct header info;

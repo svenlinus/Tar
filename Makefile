@@ -19,10 +19,13 @@ valgrind: mytar
   valgrind --leak-check=yes ./mtar
 
 archive: mytar
-	./mytar cf out tests/WhispyMeadow1234-Blu3Sky8734-CrimsonDawn4912-Gr33nLeaf5021-MysticBreeze9012-GoldenGrove2945/JadeEcho7562-SilverMist2981-CrimsonTide7410-AzureBloom5248-EbonHaven9375-GoldenPeak6102/
+	./mytar cf out tests/WhispyMeadow1234-Blu3Sky8734-CrimsonDawn4912-Gr33nLeaf5021-MysticBreeze9012-GoldenGrove2945/JadeEcho7562-SilverMist2981-CrimsonTide7410-AzureBloom5248-EbonHaven9375-GoldenPeak6102
 
 extract: mytar
 	./mytar xf out
+
+list: mytar
+	./mytar tf out
 
 clean:
 	rm -f *.o out ref mytar

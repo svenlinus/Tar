@@ -20,9 +20,7 @@
 #ifndef PATH_MAX
   #define PATH_MAX 2048
 #endif
-#define HEADER_LEN 512
-#define BODY_CHECK_LEN 512
-#define BUFFER_SIZE 2000
+#define BLOCK_SIZE 512
 
 
 void add_to_tarfile(char *to_add, int output_fd);
@@ -44,7 +42,7 @@ void int_to_octal(int input, char *result, size_t size) {
 
 char *create_archive_header(char *file_path) {
   /* Writes the archive header for one file, returns pointer to header */
-  char *header = calloc(HEADER_LEN, sizeof(char *));
+  char *header = calloc(BLOCK_SIZE, sizeof(char *));
   char prefix[155];
   int header_index = 0;
   int i;
@@ -199,7 +197,7 @@ char *create_archive_header(char *file_path) {
   char chksum[8];
   /* Location to write chksum: */
   header_index = 148;
-  for (i = 0; i < HEADER_LEN; i ++) {
+  for (i = 0; i < BLOCK_SIZE; i ++) {
     sum += header[i];
   }
   /* Add spaces (32) occupying the 8 chksum bytes (32 * 8) */
@@ -254,14 +252,14 @@ void add_to_tarfile(char *to_add, int output_fd) {
   char *curr_header = create_archive_header(to_add);
   int read_result;
   int input_fd;
-  char *buffer = (char *)malloc(BUFFER_SIZE);
+  char *buffer = (char *)malloc(BLOCK_SIZE);
   char *ending_nulls;
   int num_nulls_to_write;
   struct stat sb;
   int size;
 
   /* write the header */
-  write(output_fd, curr_header, 512);
+  write(output_fd, curr_header, BLOCK_SIZE);
 
   if (lstat(to_add, &sb) < 0) {
     perror("lstat");
@@ -272,22 +270,22 @@ void add_to_tarfile(char *to_add, int output_fd) {
     /* write the file contents */
     input_fd = open(to_add, O_RDONLY);
     do {
-      read_result = read(input_fd, buffer, BUFFER_SIZE);
+      read_result = read(input_fd, buffer, BLOCK_SIZE);
       if (read_result < 0) {
         free(buffer);
         perror("read");
         exit(EXIT_FAILURE);
       }
       write(output_fd, buffer, read_result);
-    } while((read_result != 0) || (read_result == BUFFER_SIZE -1));
+    } while((read_result != 0) || (read_result == BLOCK_SIZE -1));
     close(input_fd);
     free(buffer);
   }
 
   size = sb.st_size;
   /* writing the ending null bytes */
-  if (size < 512) {
-    num_nulls_to_write = BODY_CHECK_LEN - size;
+  if (size < BLOCK_SIZE) {
+    num_nulls_to_write = BLOCK_SIZE - size;
     ending_nulls = (char *)calloc(num_nulls_to_write, 1);
     write(output_fd, ending_nulls, num_nulls_to_write);
   }

@@ -14,3 +14,4 @@ struct header {
 
 long int octal_to_int(char *input, size_t size);
 void read_archive_header(char *header, struct header *info, bool strict);
+void list_contents(int fd, bool verbose);

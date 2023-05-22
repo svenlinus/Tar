@@ -57,7 +57,7 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   header_index += 8;
   /* Recalculate chksum */
   int sum = 0;
-  for (i = 0; i < HEADER_LEN; i ++) {
+  for (i = 0; i < BLOCK_SIZE; i ++) {
     sum += (unsigned char)header[i];
   }
   /* If the actual sum doesn't match the header chksum, then the header is 
@@ -111,7 +111,40 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   header_index += 155;
 
   printf("%s %d %d %d %d %d %d %c\n", info->name, info->stat.st_mode, info->stat.st_uid, info->stat.st_gid, (int)info->stat.st_size, (int)info->stat.st_mtime, info->chksum, info->typeflag);
-  printf("%s %s %s %s\n", info->linkname, info->uname, info->gname, info->prefix);
+  printf("%s %s %s %s\n\n", info->linkname, info->uname, info->gname, info->prefix);
+}
+
+void list_contents(int fd, bool verbose) {
+  char header[BLOCK_SIZE];
+  char path[257];
+  if (read(fd, header, BLOCK_SIZE) < 0) {
+    perror("read");
+    exit(EXIT_FAILURE);
+  }
+  while (strlen(header) > 0) {
+    struct header info;
+    read_archive_header(header, &info, false);
+    /* Add prefix to path */
+    strncpy(path, info.prefix, 155);
+    /* Add name to path */
+    if (strlen(path) > 0)
+      strcat(path, "/");
+    strncat(path, info.name, 100);
+    /* Add null terminator if necessary */
+    if (path[255])
+      path[256] = '\0';
+    printf("%s\n", path);
+    /* Seek to next header */
+    int distance = (info.stat.st_size - 1) / BLOCK_SIZE + 1;
+    lseek(fd, distance * BLOCK_SIZE, SEEK_CUR);
+    /* Read next header */
+    if (read(fd, header, BLOCK_SIZE) < 0) {
+      perror("read");
+      exit(EXIT_FAILURE);
+    }
+    printf("%d\n", distance * BLOCK_SIZE);
+    printf("%x\n", header[distance * BLOCK_SIZE]);
+  }
 }
 
 long int octal_to_int(char *input, size_t size) {
