@@ -108,15 +108,7 @@ int main(int argc, char *argv[]) {
     close(fd_out);
   }
   else if (extract_contents) {
-    int fd_in = open(argv[2], O_RDONLY);
-    if (fd_in < 0) {
-      perror("open");
-      exit(EXIT_FAILURE);
-    }
-    char *test = malloc(512);
-    read(fd_in, test, 512);
-    struct header info;
-    read_archive_header(test, &info, strict);
+    extraction(argv[2], strict, verbose);
   }
   return 0;
 }
