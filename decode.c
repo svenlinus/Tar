@@ -60,6 +60,8 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   for (i = 0; i < BLOCK_SIZE; i ++) {
     sum += (unsigned char)header[i];
   }
+  if (sum != info->chksum)
+    info->chksum = octal_to_int(chksum, 7);
   /* If the actual sum doesn't match the header chksum, then the header is 
   corrupted */
   if (sum != info->chksum) {
@@ -79,7 +81,12 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   /** Read magic **/
   char magic[6];
   strncpy(magic, header + header_index, 6);
-  if (strcmp(magic, "ustar")) {
+  if (strict) {
+    if (strcmp(magic, "ustar")) {
+      fprintf(stderr, "Corrupt magic\nexp: ustar act: %s\n", magic);
+      exit(EXIT_FAILURE);
+    } 
+  } else if (strncmp(magic, "ustar", 5)) {
     fprintf(stderr, "Corrupt magic\nexp: ustar act: %s\n", magic);
     exit(EXIT_FAILURE);
   }
@@ -109,9 +116,6 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   header_index = 345;
   strncpy(info->prefix, header + header_index, 155);
   header_index += 155;
-
-  // printf("%s %d %d %d %d %d %d %c\n", info->name, info->stat.st_mode, info->stat.st_uid, info->stat.st_gid, (int)info->stat.st_size, (int)info->stat.st_mtime, info->chksum, info->typeflag);
-  // printf("%s %s %s %s\n", info->linkname, info->uname, info->gname, info->prefix);
 }
 
 void print_entry(char *name, struct header info, bool verbose) {
@@ -138,17 +142,19 @@ void print_entry(char *name, struct header info, bool verbose) {
         printf("-");
     }
     /* Uname/gname */
-    printf(" %s/%s", info.uname, info.gname);
+    printf(" %s/%s ", info.uname, info.gname);
     /* Size */
     char size[8];
     char spaces[8];
+    for (i = 0; i < 8; i ++)
+      spaces[i] = '\0';
     sprintf(size, "%d", (int)info.stat.st_size);
     int len = strlen(size);
     memset(spaces, ' ', 8 - len);
     printf("%s%s", spaces, size);
     /* mtime */
     struct tm* timeinfo = localtime(&info.stat.st_mtime);
-    char buffer[20];  // Buffer to hold the formatted time
+    char buffer[20];
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", timeinfo);
     printf(" %s ", buffer);
   }
@@ -178,6 +184,10 @@ void list_contents(int fd, bool verbose, int num_files, char *files[]) {
       path[256] = '\0';
     /* Print entry if desired */
     for (i = 0; i < num_files; i ++) {
+      if (strcmp(files[i], path) == 0) {
+        print_entry(path, info, verbose);
+        break;
+      }
       char temp[257];
       strcpy(temp, files[i]);
       /* Add '/' if user didn't include one */
