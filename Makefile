@@ -16,13 +16,13 @@ integer.o: integer.c
 	gcc -c -Wall -Werror integer.c -g
 
 archive: mytar
-	./mytar cf out tests
+	./mytar cvf out parent
 
 extract: mytar
-	./mytar xf out
+	./mytar xvf out
 
 list: mytar
-	./mytar tf out
+	./mytar tvf out
 
 clean:
 	rm -f *.o out ref mytar
