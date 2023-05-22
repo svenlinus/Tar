@@ -159,11 +159,11 @@ void print_entry(char *name, struct header info, bool verbose) {
 void list_contents(int fd, bool verbose, int num_files, char *files[]) {
   char header[BLOCK_SIZE];
   char path[257];
+  int i;
   if (read(fd, header, BLOCK_SIZE) < 0) {
     perror("read");
     exit(EXIT_FAILURE);
   }
-  int test = open("test", O_RDONLY | O_CREAT | O_TRUNC, 0644);
   while (strlen(header) > 0) {
     struct header info;
     read_archive_header(header, &info, false);
@@ -198,7 +198,6 @@ void list_contents(int fd, bool verbose, int num_files, char *files[]) {
       perror("read");
       exit(EXIT_FAILURE);
     }
-    write(test, header, BLOCK_SIZE);
   }
 }
 
