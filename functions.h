@@ -23,3 +23,4 @@ long int octal_to_int(char *input);
 void read_archive_header(char *header, struct header *info, bool strict);
 void list_contents(int fd, bool verbose, int num_files, char *files[]);
 void extraction(char *tarfile_name, bool strict, bool verbose, char *spec);
+void maybe_create_dir(char *new_dir);

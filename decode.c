@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "functions.h"
+#include <errno.h>
 
 void read_archive_header(char *header, struct header *info, bool strict) {
   /* Extracts desired header fields and stores the data in `info` */
@@ -225,6 +226,7 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
   int curr_mode;
   int i;
   int skip_flag = 0;
+  char new_dirs[256];
 
   /* buffer to read in blocks at a time */
   char *read_buffer = (char *)malloc(BLOCK_SIZE);
@@ -292,7 +294,27 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
         }
         /* checks if we should be writing or not */
         if (skip_flag == 0) {
+          /* iterate through the curr_name
+           * when I reach a /, create that directory */
+          for (i=0; i<256; i++) {
+            new_dirs[i] = '\0';
+          }
+          i=0;
+          while (curr_name[i] != '\0') {
+            if (curr_name[i] != '/') {
+              new_dirs[i] = curr_name[i];
+            }
+            else {
+              new_dirs[i] = '/';
+              maybe_create_dir(new_dirs);
+            }
+            i++;
+          }
           curr_output_fd = open(curr_name, O_WRONLY | O_CREAT | O_TRUNC, perms);
+          if (curr_output_fd == -1) {
+            fprintf(stderr, "curr_name: %s\nperms: %o\n", curr_name, perms);
+            fprintf(stderr, "errno: %s\n", strerror(errno));
+          }
           num_bytes_written = write(curr_output_fd, curr_body_buffer, curr_size);
           if (num_bytes_written < 0) {
             perror("write");
@@ -337,4 +359,11 @@ long int octal_to_int(char *input) {
     result |= octal << ((len - 1 - i) * 3);
   }
   return result;
+}
+
+void maybe_create_dir(char *new_dir) {
+  struct stat sb;
+  if (lstat(new_dir, &sb) < 0) {
+    mkdir(new_dir, 0777);
+  }
 }
