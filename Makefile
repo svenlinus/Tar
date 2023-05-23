@@ -1,16 +1,16 @@
 all: mytar
 
-mytar: mytar.o encode.o decode.o integer.o
-	gcc -o mytar -Wall -Werror mytar.o encode.o decode.o integer.o -g
+mytar: mytar.o create.o extract.o integer.o
+	gcc -o mytar -Wall -Werror mytar.o create.o extract.o integer.o -g
 
 mytar.o: mytar.c
 	gcc -c -Wall -Werror mytar.c -g
 
-encode.o: encode.c
-	gcc -c -Wall -Werror encode.c -g
+create.o: create.c
+	gcc -c -Wall -Werror create.c -g
 
-decode.o: decode.c
-	gcc -c -Wall -Werror decode.c -g
+extract.o: extract.c
+	gcc -c -Wall -Werror extract.c -g
 
 integer.o: integer.c
 	gcc -c -Wall -Werror integer.c -g
