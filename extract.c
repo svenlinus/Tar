@@ -219,8 +219,7 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
   char *curr_body_buffer;
   int num_bytes_read, bytes_written;
   int offset;
-  int curr_type;
-  struct stat sb;
+  char curr_type;
   int perms = 0666;
   int null_block;
   int curr_mode;
@@ -253,7 +252,6 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
     }
     /* check that the first byte isn't null */
     if (read_buffer[0] != '\0') {
-
       /* get information about the dir/file */
       read_archive_header(read_buffer, &info, strict);
       strncpy(curr_path, info.prefix, PREF_LEN);
@@ -277,22 +275,6 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
       curr_type = info.typeflag;
       if (verbose && skip_flag == 0) {
         printf("%s\n", curr_path);
-      }
-      /* case for a symlink */
-      if (curr_type == 2) {
-        int ln = symlink(info.linkname, curr_path);
-        if (ln != 0) {
-          perror("symlink");
-          exit(EXIT_FAILURE);
-        }
-      }
-      /* case for a directory, continue */
-      if (curr_type == 5) {
-        /* making the dir */
-        if (lstat(curr_path, &sb) == -1) {
-          mkdir(curr_path, ALL_PERMS);
-        }
-        /* continue; */
       }
       /* open the un-tarred file */
       if (info.stat.st_mode & 0111) {
@@ -329,6 +311,27 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
           offset = BLOCK_SIZE - (curr_size % BLOCK_SIZE);
           lseek(tar_fd, offset, SEEK_CUR);
         }
+      }
+      else if (curr_type == '5' && !skip_flag) {
+        maybe_create_dir(curr_path);
+      }
+      /* case for a symlink */
+      else if (curr_type == '2' && !skip_flag) {
+        char target[PATH_LEN + NAME_LEN + 1];
+        /* Find the first '/' from the end of `curr_path` */
+        i = strlen(curr_path);
+        while (i >= 0 && curr_path[i--] != '/') {
+          /* do nothing */
+        }
+        strncpy(target, curr_path, i + 1);
+        strcat(target, "/");
+        strcat(target, info.linkname);
+        int tar;
+        if ((tar = open(target, O_RDONLY|O_CREAT, perms)) < 0) {
+          perror("open");
+          exit(EXIT_FAILURE);
+        }
+        symlink(info.linkname, curr_path);
       }
     }
     null_block = 1;
