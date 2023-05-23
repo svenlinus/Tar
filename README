@@ -1,0 +1,10 @@
+Names:
+Sven Toernqvist (stoernqv)
+Riya Badadare (rbadadar)
+
+Instructions:
+make mytar: compiles all source files
+make archive: tests create archive
+make list: tests table of contents
+make extract: tests extraction
+make clean: removes leftover object and test files.
