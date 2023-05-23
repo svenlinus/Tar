@@ -55,7 +55,6 @@ int main(int argc, char *argv[]) {
         break;
     }
   }
-  printf("%s %d %d %d %d %d\n---------\n", output, create_archive, print_contents, extract_contents, verbose, strict);
   if (!output)
     usage();
   if (create_archive + print_contents + extract_contents > 1) {
@@ -76,7 +75,7 @@ int main(int argc, char *argv[]) {
     list_contents(fd_in, verbose, argc - 3, argc > 3 ? argv + 3 : NULL);
   }
   else if (create_archive) {
-    int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0777);
+    int fd_out = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, ALL_PERMS);
     if (fd_out < 0) {
       perror("open");
       exit(EXIT_FAILURE);
@@ -90,7 +89,7 @@ int main(int argc, char *argv[]) {
         add_to_tarfile(argv[i], fd_out);
       }
       else if (S_ISDIR(sb.st_mode)) {
-        char temp[256];
+        char temp[PATH_LEN];
         strcpy(temp, argv[i]);
         /* Add '/' if user didn't include one */
         if (temp[strlen(temp) - 1] != '/')
@@ -113,13 +112,13 @@ int main(int argc, char *argv[]) {
   else if (extract_contents) {
     if (argc > 3) {
       int num_specs = argc - 3;
-      char spec[num_specs][256];
-      for (i=0; i<num_specs; i++) {
-        for (j=0; j<256; j++) {
+      char spec[num_specs][PATH_LEN];
+      for (i = 0; i < num_specs; i++) {
+        for (j = 0; j < PATH_LEN; j++) {
           spec[i][j] = '\0';
         }
       }
-      for (i=0; i<num_specs; i++) {
+      for (i = 0; i < num_specs; i++) {
         strcpy(spec[i], argv[i+3]);
         extraction(argv[2], strict, verbose, spec[i]);
       }

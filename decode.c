@@ -13,8 +13,8 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   int i;
 
   /** Read name **/
-  strncpy(info->name, header, 100);
-  header_index += 100;
+  strncpy(info->name, header, NAME_LEN);
+  header_index += NAME_LEN;
 
   /** Read mode **/
   char mode[8];
@@ -73,8 +73,8 @@ void read_archive_header(char *header, struct header *info, bool strict) {
   header_index += 1;
 
   /** Read linkname **/
-  strncpy(info->linkname, header + header_index, 100);
-  header_index += 100;
+  strncpy(info->linkname, header + header_index, NAME_LEN);
+  header_index += NAME_LEN;
 
   /** Read magic **/
   char magic[6];
@@ -112,8 +112,8 @@ void read_archive_header(char *header, struct header *info, bool strict) {
 
   /** Read prefix **/
   header_index = 345;
-  strncpy(info->prefix, header + header_index, 155);
-  header_index += 155;
+  strncpy(info->prefix, header + header_index, PREF_LEN);
+  header_index += PREF_LEN;
 }
 
 void print_entry(char *name, struct header info, bool verbose) {
@@ -162,7 +162,7 @@ void print_entry(char *name, struct header info, bool verbose) {
 
 void list_contents(int fd, bool verbose, int num_files, char *files[]) {
   char header[BLOCK_SIZE];
-  char path[257];
+  char path[PATH_LEN + 1];
   int i;
   if (read(fd, header, BLOCK_SIZE) < 0) {
     perror("read");
@@ -172,14 +172,14 @@ void list_contents(int fd, bool verbose, int num_files, char *files[]) {
     struct header info;
     read_archive_header(header, &info, false);
     /* Add prefix to path */
-    strncpy(path, info.prefix, 155);
+    strncpy(path, info.prefix, PREF_LEN);
     /* Add name to path */
     if (strlen(path) > 0)
       strcat(path, "/");
-    strncat(path, info.name, 100);
+    strncat(path, info.name, NAME_LEN);
     /* Add null terminator if necessary */
-    if (path[255])
-      path[256] = '\0';
+    if (path[PATH_LEN - 1])
+      path[PATH_LEN] = '\0';
     /* Print entry if desired */
     for (i = 0; i < num_files; i ++) {
       if (strcmp(files[i], path) == 0) {
@@ -279,13 +279,13 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
       if (curr_type == 5) {
         /* making the dir */
         if (lstat(curr_name, &sb) == -1) {
-          mkdir(curr_name, 0777);
+          mkdir(curr_name, ALL_PERMS);
         }
         continue;
       }
       /* open the un-tarred file */
       if (info.stat.st_mode & 0111) {
-        perms = 0777;
+        perms = ALL_PERMS;
       }
       if (curr_size > 0) {
         if (!(curr_body_buffer = malloc(curr_size))) {
@@ -299,8 +299,8 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
         }
         /* checks if we should be writing or not */
         if (skip_flag == 0) {
-          curr_output_fd = open(curr_name, O_WRONLY | O_CREAT | O_TRUNC, perms);
-          num_bytes_written = write(curr_output_fd, curr_body_buffer, curr_size);
+          curr_output_fd = open(curr_name, O_WRONLY|O_CREAT|O_TRUNC, perms);
+          num_bytes_written = write(curr_output_fd,curr_body_buffer,curr_size);
           if (num_bytes_written < 0) {
             perror("write");
             exit(EXIT_FAILURE);

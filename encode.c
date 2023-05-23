@@ -14,15 +14,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#ifndef PATH_MAX
-  #define PATH_MAX 2048
-#endif
-#ifndef PATH_MAX
-  #define PATH_MAX 2048
-#endif
-#define BLOCK_SIZE 512
-
-
 
 void int_to_octal(int input, char *result, size_t size) {
   /* Converts an integer into and octal string and pads the start with 0's */
@@ -47,7 +38,7 @@ void int_to_octal(int input, char *result, size_t size) {
 char *create_archive_header(char *file_path) {
   /* Writes the archive header for one file, returns pointer to header */
   char *header;
-  char prefix[155];
+  char prefix[PREF_LEN];
   int header_index = 0;
   int i;
   if (!(header = calloc(BLOCK_SIZE, sizeof(char *)))) {
@@ -56,17 +47,17 @@ char *create_archive_header(char *file_path) {
   }
 
   /** Write file name **/
-  for (i = 0; i < 155; i ++)
+  for (i = 0; i < PREF_LEN; i ++)
     prefix[i] = '\0';
   int path_len;
-  if ((path_len = strlen(file_path)) > 255) {
+  if ((path_len = strlen(file_path)) >= PATH_LEN) {
       fprintf(stderr, "File path %s too long", file_path);
       exit(EXIT_FAILURE);
   }
   /* If `file_path` can't fit in name field (100 bytes), include the end of 
   `file_path` in name and write the rest in `prefix` */
-  if (path_len > 100) {
-    i = path_len - 100;
+  if (path_len > NAME_LEN) {
+    i = path_len - NAME_LEN;
     /* Find the first '/' within 100 characters from the end */
     while (i < path_len && file_path[i++] != '/') {
       /* do nothing */
@@ -74,10 +65,10 @@ char *create_archive_header(char *file_path) {
     if (i < path_len-1) {
       /* `prefix = file_path[0:i]` */
       strncpy(prefix, file_path, i-1);
-      if (i-1 < 155)
+      if (i-1 < PREF_LEN)
         prefix[i-1] = '\0';
       /* `header_name_field = file_path[i:]` */
-      strncpy(header, file_path + i, 100);
+      strncpy(header, file_path + i, NAME_LEN);
     } else {
       fprintf(stderr, "Can't create header: File name %s too long", file_path);
       exit(EXIT_FAILURE);
@@ -85,7 +76,7 @@ char *create_archive_header(char *file_path) {
   } else {
     strcpy(header, file_path);
   }
-  header_index += 100;
+  header_index += NAME_LEN;
 
   /** Write file mode **/
   struct stat st;
@@ -96,7 +87,8 @@ char *create_archive_header(char *file_path) {
     exit(EXIT_FAILURE);
   }
   /* Convert to 4 digit octal (mask to ensure it is 4 digits) */
-  int_to_octal(st.st_mode & 07777, mode_octal, 8);
+  const int mode_mask = 07777;
+  int_to_octal(st.st_mode & mode_mask, mode_octal, 8);
   strcpy(header + header_index, mode_octal);
   header_index += 8;
 
@@ -158,12 +150,12 @@ char *create_archive_header(char *file_path) {
 
   /** Write linkname **/
   header_index = 157;
-  char readlink_buffer[100];
-  ssize_t num_read = readlink(file_path, readlink_buffer, 100);
+  char readlink_buffer[NAME_LEN];
+  ssize_t num_read = readlink(file_path, readlink_buffer, NAME_LEN);
   if (num_read > 0) {
     strcpy(header + header_index, readlink_buffer);
     header_index += num_read;
-    if (num_read != 100) {
+    if (num_read != NAME_LEN) {
       header[header_index] = '\0';
     }
   }
@@ -189,7 +181,6 @@ char *create_archive_header(char *file_path) {
   char *uname = pw->pw_name;
   char *gname = gr->gr_name;
 
-  /* ask if the truncation is different */
   strncpy(header + header_index, uname, 32); 
   header_index = 297;
   strncpy(header + header_index, gname, 32);
@@ -236,7 +227,7 @@ void traverse_directory(char *path, int output_fd, bool verbose) {
     }
 
     /* getting the path of the current child */
-    char new_path[256];
+    char new_path[PATH_LEN];
     strcpy(new_path, path);
     strcat(new_path, dir_read->d_name);
 
