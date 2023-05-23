@@ -1,3 +1,4 @@
+/* create.c adds files to a tar archive */
 
 #include <stdio.h>
 #include <stdlib.h>

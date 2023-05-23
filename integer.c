@@ -1,3 +1,6 @@
+/* integer.c creates and reads special integers from tar headers so that 
+ * they may be compatible with GNU's tar */
+
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdint.h>

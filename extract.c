@@ -1,3 +1,6 @@
+/* extract.c extracts files from a tar archive and can print a tarfile's 
+ * table of contents */
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
