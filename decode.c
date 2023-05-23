@@ -305,7 +305,9 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
           for (i=0; i<256; i++) {
             new_dirs[i] = '\0';
           }
-          /*  */
+          /* adding the curr path to a char array
+           * when a '/' is reached, a the directory is created if 
+           * it does not already exist */
           i=0;
           while (curr_name[i] != '\0') {
             if (curr_name[i] != '/') {
