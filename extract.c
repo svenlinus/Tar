@@ -274,7 +274,6 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
           skip_flag = 1;
         }
       }
-
       curr_size = info.stat.st_size;
       curr_type = info.typeflag;
       if (verbose && skip_flag == 0) {
@@ -282,7 +281,11 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
       }
       /* case for a symlink */
       if (curr_type == 2) {
-        strncpy(curr_path, info.linkname, NAME_LEN);
+        int ln = symlink(info.linkname, curr_path);
+        if (ln != 0) {
+          perror("symlink");
+          exit(EXIT_FAILURE);
+        }
       }
       /* case for a directory, continue */
       if (curr_type == 5) {
