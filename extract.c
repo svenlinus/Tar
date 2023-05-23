@@ -226,7 +226,6 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
   int curr_mode;
   int i;
   int skip_flag = 0;
-  char new_dirs[256];
 
   /* buffer to read in blocks at a time */
   char *read_buffer;
@@ -293,7 +292,7 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
         if (lstat(curr_path, &sb) == -1) {
           mkdir(curr_path, ALL_PERMS);
         }
-        continue;
+        /* continue; */
       }
       /* open the un-tarred file */
       if (info.stat.st_mode & 0111) {
@@ -311,24 +310,8 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
         }
         /* checks if we should be writing or not */
         if (skip_flag == 0) {
-          /* setting every char in new_dirs to \0 */
-          for (i=0; i<256; i++) {
-            new_dirs[i] = '\0';
-          }
-          /* adding the curr path to a char array,
-           * when a '/' is reached, a the directory is created if 
-           * it does not already exist */
-          i=0;
-          while (curr_path[i] != '\0') {
-            if (curr_path[i] != '/') {
-              new_dirs[i] = curr_path[i];
-            }
-            else {
-              new_dirs[i] = '/';
-              maybe_create_dir(new_dirs);
-            }
-            i++;
-          }
+          maybe_create_dir(curr_path);
+
           curr_output_fd = open(curr_path, O_WRONLY|O_CREAT|O_TRUNC, perms);
           if (curr_output_fd == -1) {
             perror("open");
@@ -380,10 +363,30 @@ long int octal_to_int(char *input) {
   return result;
 }
 
-void maybe_create_dir(char *new_dir) {
+void maybe_create_dir(char *curr_path) {
   /* will create the directory if it does not already exits */
+  char new_dirs[256];
   struct stat sb;
-  if (lstat(new_dir, &sb) < 0) {
-    mkdir(new_dir, 0777);
+  int i;
+
+  /* setting every char in new_dirs to \0 */
+  for (i=0; i<256; i++) {
+    new_dirs[i] = '\0';
+  }
+  /* adding the curr path to a char array,
+   * when a '/' is reached, a the directory is created if 
+   * it does not already exist */
+  i=0;
+  while (curr_path[i] != '\0') {
+    if (curr_path[i] != '/') {
+      new_dirs[i] = curr_path[i];
+    }
+    else {
+      new_dirs[i] = '/';
+      if (lstat(new_dirs, &sb) < 0) {
+        mkdir(new_dirs, 0777);
+      }
+    }
+    i++;
   }
 }
