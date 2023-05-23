@@ -23,11 +23,13 @@ void int_to_octal(int input, char *result, size_t size) {
     perror("malloc");
     exit(EXIT_FAILURE);
   }
+  /* conversion */
   sprintf(octal, "%o", input);
   if ((len = strlen(octal)) > size-1) {
     fprintf(stderr, "Can't create header: Octal %s too large", octal);
     exit(EXIT_FAILURE);
   }
+  /* padding */
   for (i = 0; i < size - len - 1; i ++)
     result[i] = '0';
   strcpy(result + i, octal);
@@ -41,11 +43,11 @@ char *create_archive_header(char *file_path) {
   char prefix[PREF_LEN];
   int header_index = 0;
   int i;
+  /* allocating header */
   if (!(header = calloc(BLOCK_SIZE, sizeof(char *)))) {
     perror("calloc");
     exit(EXIT_FAILURE);
   }
-
   /** Write file name **/
   for (i = 0; i < PREF_LEN; i ++)
     prefix[i] = '\0';
@@ -208,12 +210,14 @@ char *create_archive_header(char *file_path) {
   return header;
 }
 
-void add_to_tarfile(char *to_add, int output_fd);
-
 void traverse_directory(char *path, int output_fd, bool verbose) {
+  /* go through the provided path to add each 
+   * directory/file to the tarfile */
   DIR *dir;
   struct dirent *dir_read;
   struct stat stat_buffer;
+
+  /* opening the directory passed in */
   dir = opendir(path);
   if (dir == NULL) {
     perror("opendir");
@@ -248,10 +252,12 @@ void traverse_directory(char *path, int output_fd, bool verbose) {
       traverse_directory(new_path, output_fd, verbose);
     }
   }
+  /* closing the directory */
   closedir(dir);
 }
 
 void add_to_tarfile(char *to_add, int output_fd) {
+  /* writing the header, file contents, and padding */
   char *curr_header = create_archive_header(to_add);
   int read_result;
   int input_fd;
@@ -263,6 +269,7 @@ void add_to_tarfile(char *to_add, int output_fd) {
   int iterations = 0;
   int num_null_to_add;
 
+  /* allocating memory for the buffer */
   if (!(buffer = malloc(BLOCK_SIZE))) {
     perror("malloc");
     exit(EXIT_FAILURE);
@@ -306,9 +313,11 @@ void add_to_tarfile(char *to_add, int output_fd) {
           exit(EXIT_FAILURE);
         }
         write(output_fd, ending_nulls, num_null_to_add);
+        /* freeing the null byte buffer */
         free(ending_nulls);
       }
     }
   }
+  /* freeing the buffer */
   free(buffer);
 }

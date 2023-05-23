@@ -8,11 +8,19 @@
 #define ALL_PERMS 0777
 typedef enum { false, true } bool;
 
+/* mytar.c */
+void usage();
+
+/* integer.c */
 uint32_t extract_special_int(char *where, int len);
 int insert_special_int(char *where, size_t size, int32_t val);
+
+/* create.c */
 char *create_archive_header(char *file_path);
 void traverse_directory(char *path, int output_fd, bool verbose);
 void add_to_tarfile(char *to_add, int output_fd);
+
+/* extract.c */
 struct header {
   struct stat stat;
   char name[NAME_LEN];

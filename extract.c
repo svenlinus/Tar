@@ -118,6 +118,7 @@ void read_archive_header(char *header, struct header *info, bool strict) {
 }
 
 void print_entry(char *name, struct header info, bool verbose) {
+  /* print an entry in a tarfile based on verbosity */
   if (verbose) {
     /* Type */
     switch (info.typeflag) {
@@ -162,6 +163,7 @@ void print_entry(char *name, struct header info, bool verbose) {
 }
 
 void list_contents(int fd, bool verbose, int num_files, char *files[]) {
+  /* list the contents of the header based on verbosity and file args */
   char header[BLOCK_SIZE];
   char path[PATH_LEN + 1];
   int i;
@@ -211,7 +213,7 @@ void list_contents(int fd, bool verbose, int num_files, char *files[]) {
 }
 
 void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
-
+  /* extract contents from a tarfile and write them to the right place */
   int curr_output_fd;
   struct header info;
   int curr_size;
@@ -225,7 +227,7 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
   int curr_mode;
   int i;
   int skip_flag = 0;
-  char new_dirs[256];
+  char new_dirs[PATH_LEN];
 
   /* buffer to read in blocks at a time */
   char *read_buffer;
@@ -255,25 +257,29 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
     if (read_buffer[0] != '\0') {
       /* get information about the dir/file */
       read_archive_header(read_buffer, &info, strict);
+      /* adding the prefix to the path */
       strncpy(curr_path, info.prefix, PREF_LEN);
       if (strlen(curr_path) > 0) {
         strcat(curr_path, "/");
       }
+      /* adding the name to the path */
       strncat(curr_path, info.name, NAME_LEN);
       if (curr_path[PATH_LEN-1]) {
         curr_path[PATH_LEN] = '\0';
       }
-
       curr_mode = info.stat.st_mode;
+      /* adding a '/' to the arg if needed */
       if (spec != NULL) {
-        if (S_ISDIR(curr_mode) && spec[strlen(spec) - 1] != '/')
+        if (S_ISDIR(curr_mode) && spec[strlen(spec) - 1] != '/') {
           strcat(spec, "/");
+        }
         if (strncmp(spec, curr_path, strlen(spec)) != 0) {
           skip_flag = 1;
         }
       }
       curr_size = info.stat.st_size;
       curr_type = info.typeflag;
+      /* printing the path if verbose is on */
       if (verbose && skip_flag == 0) {
         printf("%s\n", curr_path);
       }
@@ -281,6 +287,7 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
       if (info.stat.st_mode & 0111) {
         perms = ALL_PERMS;
       }
+      /* checking if it's a nonempty file */
       if (curr_size > 0) {
         if (!(curr_body_buffer = malloc(curr_size))) {
           perror("malloc");
@@ -293,8 +300,8 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
         }
         /* checks if we should be writing or not */
         if (skip_flag == 0) {
-          /* setting every char in new_dirs to \0 */
-          for (i=0; i<256; i++) {
+          /* setting every char in new_dirs to '\0' */
+          for (i=0; i<PATH_LEN; i++) {
             new_dirs[i] = '\0';
           }
           /* adding the curr path to a char array,
@@ -311,24 +318,29 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
             }
             i++;
           }
+          /* opening the output file */
           curr_output_fd = open(curr_path, O_WRONLY|O_CREAT|O_TRUNC, perms);
           if (curr_output_fd == -1) {
             perror("open");
             exit(EXIT_FAILURE);
           }
+          /* writing to the output file */
           bytes_written = write(curr_output_fd, curr_body_buffer, curr_size);
           if (bytes_written < 0) {
             perror("write");
             exit(EXIT_FAILURE);
           }
+          /* closing the output file */
           close(curr_output_fd);
         }
         free(curr_body_buffer);
+        /* lseeking to the right spot (beginning of next block) */
         if (curr_size != BLOCK_SIZE) {
           offset = BLOCK_SIZE - (curr_size % BLOCK_SIZE);
           lseek(tar_fd, offset, SEEK_CUR);
         }
       }
+      /* maybe creating a dir */
       else if (curr_type == '5' && !skip_flag) {
         maybe_create_dir(curr_path);
       }
@@ -340,17 +352,24 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
         while (i >= 0 && curr_path[i--] != '/') {
           /* do nothing */
         }
+        /* creating the target path */
         strncpy(target, curr_path, i + 1);
         strcat(target, "/");
         strcat(target, info.linkname);
         int tar;
+        /* create target file if it doesn't already exist */
         if ((tar = open(target, O_RDONLY|O_CREAT, perms)) < 0) {
           perror("open");
           exit(EXIT_FAILURE);
         }
-        symlink(info.linkname, curr_path);
+        /* symlinking */
+        if (symlink(info.linkname, curr_path) != 0) {
+          perror("symlink");
+          exit(EXIT_FAILURE);
+        }
       }
     }
+    /* seeing if we are at the end of the tarfile, setting the flag */
     null_block = 1;
     for (i=0; i<BLOCK_SIZE; i++) {
       if (read_buffer[i] != '\0') {
@@ -387,6 +406,6 @@ void maybe_create_dir(char *new_dir) {
   /* will create the directory if it does not already exits */
   struct stat sb;
   if (lstat(new_dir, &sb) < 0) {
-    mkdir(new_dir, 0777);
+    mkdir(new_dir, ALL_PERMS);
   }
 }

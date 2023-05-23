@@ -10,11 +10,6 @@
 
 extern char *optarg;
 
-void usage() {
-  fprintf(stderr, "usage: mytar [ctxvS]f tarfile [ path [ ... ] ]\n");
-  exit(EXIT_FAILURE);
-}
-
 int main(int argc, char *argv[]) {
   char opt;
   int i = 0;
@@ -55,6 +50,8 @@ int main(int argc, char *argv[]) {
         break;
     }
   }
+
+  /* stderr printing for incorrect usage */
   if (!output)
     usage();
   if (create_archive + print_contents + extract_contents > 1) {
@@ -80,6 +77,7 @@ int main(int argc, char *argv[]) {
       perror("open");
       exit(EXIT_FAILURE);
     }
+    /* loop through all optional arguments */
     for (i = 3; i < argc; i ++) {
       if (lstat(argv[i], &sb) < 0) {
         fprintf(stderr, "No such file of directory: %s\n", argv[i]);
@@ -96,10 +94,13 @@ int main(int argc, char *argv[]) {
           strcat(temp, "/");
         if (verbose)
           printf("%s\n", temp);
+        /* add directory to tarfile */
         add_to_tarfile(temp, fd_out);
+        /* add all directory entries to tarfile */
         traverse_directory(temp, fd_out, verbose);
       }
     }
+    /* writing the two ending null blocks */
     char *two_null_blocks;
     if (!(two_null_blocks = calloc(BLOCK_SIZE * 2, 1))) {
       perror("calloc");
@@ -111,6 +112,7 @@ int main(int argc, char *argv[]) {
   }
   else if (extract_contents) {
     if (argc > 3) {
+      /* if there are optional arguments */
       int num_specs = argc - 3;
       char spec[num_specs][PATH_LEN];
       for (i = 0; i < num_specs; i++) {
@@ -119,13 +121,22 @@ int main(int argc, char *argv[]) {
         }
       }
       for (i = 0; i < num_specs; i++) {
+        /* putting the optional arguments in a string array */
         strcpy(spec[i], argv[i+3]);
+        /* extract files specified by the string */
         extraction(argv[2], strict, verbose, spec[i]);
       }
     }
     else {
+      /* extracting with no optional arguments */
       extraction(argv[2], strict, verbose, NULL);
     }
   }
   return 0;
+}
+
+void usage() {
+  /* printing the usage error message to stderr */
+  fprintf(stderr, "usage: mytar [ctxvS]f tarfile [ path [ ... ] ]\n");
+  exit(EXIT_FAILURE);
 }
