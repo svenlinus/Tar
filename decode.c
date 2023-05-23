@@ -244,10 +244,10 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
 
   /* go through the tarfile one block at a time */
   do {
+    /* setting a flag in case it's not in the specified arg for extract */
     skip_flag = 0;
     /* read a block */
     num_bytes_read = read(tar_fd, read_buffer, BLOCK_SIZE);
-    /* printf("num_bytes_read: %d\n", num_bytes_read); */
     if (num_bytes_read < 0) {
       perror("read");
       exit(EXIT_FAILURE);
@@ -270,7 +270,7 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
 
       curr_size = info.stat.st_size;
       curr_type = info.typeflag;
-      if (verbose) {
+      if (verbose && skip_flag == 0) {
         printf("%s\n", curr_name);
       }
       /* case for a symlink */
@@ -301,11 +301,11 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
         }
         /* checks if we should be writing or not */
         if (skip_flag == 0) {
-          /* iterate through the curr_name
-           * when I reach a /, create that directory */
+          /* setting every char in new_dirs to \0 */
           for (i=0; i<256; i++) {
             new_dirs[i] = '\0';
           }
+          /*  */
           i=0;
           while (curr_name[i] != '\0') {
             if (curr_name[i] != '/') {
@@ -369,6 +369,7 @@ long int octal_to_int(char *input) {
 }
 
 void maybe_create_dir(char *new_dir) {
+  /* will create the directory if it does not already exits */
   struct stat sb;
   if (lstat(new_dir, &sb) < 0) {
     mkdir(new_dir, 0777);
