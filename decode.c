@@ -215,7 +215,7 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
   int curr_output_fd;
   struct header info;
   int curr_size;
-  char *curr_name;
+  char curr_path[PATH_LEN + 1];
   char *curr_body_buffer;
   int num_bytes_read, bytes_written;
   int offset;
@@ -257,13 +257,20 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
 
       /* get information about the dir/file */
       read_archive_header(read_buffer, &info, strict);
-      curr_name = info.name;
+      strncpy(curr_path, info.prefix, PREF_LEN);
+      if (strlen(curr_path) > 0) {
+        strcat(curr_path, "/");
+      }
+      strncat(curr_path, info.name, NAME_LEN);
+      if (curr_path[PATH_LEN-1]) {
+        curr_path[PATH_LEN] = '\0';
+      }
 
       curr_mode = info.stat.st_mode;
       if (spec != NULL) {
         if (S_ISDIR(curr_mode) && spec[strlen(spec) - 1] != '/')
           strcat(spec, "/");
-        if (strncmp(spec, curr_name, strlen(spec)) != 0) {
+        if (strncmp(spec, curr_path, strlen(spec)) != 0) {
           skip_flag = 1;
         }
       }
@@ -271,17 +278,17 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
       curr_size = info.stat.st_size;
       curr_type = info.typeflag;
       if (verbose && skip_flag == 0) {
-        printf("%s\n", curr_name);
+        printf("%s\n", curr_path);
       }
       /* case for a symlink */
       if (curr_type == 2) {
-        curr_name = info.linkname;
+        strncpy(curr_path, info.linkname, NAME_LEN);
       }
       /* case for a directory, continue */
       if (curr_type == 5) {
         /* making the dir */
-        if (lstat(curr_name, &sb) == -1) {
-          mkdir(curr_name, ALL_PERMS);
+        if (lstat(curr_path, &sb) == -1) {
+          mkdir(curr_path, ALL_PERMS);
         }
         continue;
       }
@@ -305,13 +312,13 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
           for (i=0; i<256; i++) {
             new_dirs[i] = '\0';
           }
-          /* adding the curr path to a char array
+          /* adding the curr path to a char array,
            * when a '/' is reached, a the directory is created if 
            * it does not already exist */
           i=0;
-          while (curr_name[i] != '\0') {
-            if (curr_name[i] != '/') {
-              new_dirs[i] = curr_name[i];
+          while (curr_path[i] != '\0') {
+            if (curr_path[i] != '/') {
+              new_dirs[i] = curr_path[i];
             }
             else {
               new_dirs[i] = '/';
@@ -319,7 +326,7 @@ void extraction(char *tarfile_name, bool strict, bool verbose, char *spec) {
             }
             i++;
           }
-          curr_output_fd = open(curr_name, O_WRONLY|O_CREAT|O_TRUNC, perms);
+          curr_output_fd = open(curr_path, O_WRONLY|O_CREAT|O_TRUNC, perms);
           if (curr_output_fd == -1) {
             perror("open");
             exit(EXIT_FAILURE);
