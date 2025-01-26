@@ -1,6 +1,6 @@
-Names: Sven Toernqvist, Riya Badadare
+Our own implementation of GNU Tar, made by Sven Toernqvist and Riya Badadare
 
-Instructions:
+Usage:
 make mytar: compiles all source files
 make archive: tests create archive
 make list: tests table of contents
