@@ -1,8 +1,21 @@
 Our own implementation of GNU Tar, made by Sven Toernqvist and Riya Badadare
 
-Usage:
+Compile instructions and tests:
 make mytar: compiles all source files
 make archive: tests create archive
 make list: tests table of contents
 make extract: tests extraction
 make clean: removes leftover object and test files.
+
+Usage:
+Compile first: make mytar
+To compress files
+./mytar [vS]cf [tarfile] [ path [ ... ] ]
+To list the files in an archive
+./mytar [v]tf [tarfile]
+To decompress an archive
+./mytar [v]xf [tarfile]
+
+The v option stands for verbose, meaning that the program will print extra information.
+The S option means that the tar file is created in Strict accordance with GNU tar.
+
